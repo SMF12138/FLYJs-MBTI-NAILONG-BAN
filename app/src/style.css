@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Inter', system-ui, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* 防止移动端双击缩放 */
+  touch-action: manipulation;
+}
+
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+html {
+  font-size: 25px;
+}
+
+/* 统一内容容器 */
+.test-container {
+  width: 1510px;
+  max-width: 95%;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 80px;
+}
+
+/* 自定义动画 */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.animate-pulse-custom {
+  animation: pulse 2s infinite;
+}
+
+.animate-shake {
+  animation: shake 0.3s ease-in-out;
+}
+
+/* 通用卡片样式 */
+.card {
+  @apply bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg;
+}
+
+/* 通用按钮 */
+.btn-primary {
+  @apply bg-gradient-to-r from-primary to-secondary text-white font-medium
+    rounded-xl transition-all duration-200
+    hover:opacity-90 hover:shadow-md active:scale-[0.98];
+}
+
+.btn-secondary {
+  @apply border-2 border-gray-200 text-gray-600 font-medium
+    rounded-xl transition-all duration-200
+    hover:border-gray-300 hover:bg-gray-50 active:scale-[0.98];
+}
