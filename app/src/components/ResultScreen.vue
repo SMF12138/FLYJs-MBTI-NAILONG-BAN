@@ -360,7 +360,7 @@ const hiddenCount = computed(() => hiddenChallenges.value.filter(c => c.found).l
               </div>
               <!-- 人物介绍浮层 -->
               <div class="absolute bottom-full left-0 right-0 mb-2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
-                <div class="glass-card p-4 border border-gray-600/50 max-h-[260px] overflow-y-auto shadow-xl">
+                <div class="glass-card p-4 border border-gray-600/50 shadow-xl">
                   <div class="text-sm text-gray-300 leading-relaxed text-left">
                     <p v-for="(seg, i) in formatDesc(trait.desc)" :key="i"><span v-if="seg.label" class="desc-label" :class="'desc-label-' + (i % 5)">{{ seg.label.replace(/^【|】$/g, '') }}</span><span style="white-space: pre-line;">{{ seg.text }}</span></p>
                   </div>
@@ -448,7 +448,7 @@ const hiddenCount = computed(() => hiddenChallenges.value.filter(c => c.found).l
             </div>
             <!-- 人物介绍浮层 -->
             <div class="absolute bottom-full left-0 right-0 mb-2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
-              <div class="glass-card p-4 border border-gray-600/50 max-h-[220px] overflow-y-auto shadow-xl">
+              <div class="glass-card p-4 border border-gray-600/50 shadow-xl">
                 <div class="text-sm text-gray-300 leading-relaxed text-left">
                   <p v-for="(seg, i) in formatDesc(char.desc)" :key="i"><span v-if="seg.label" class="desc-label" :class="'desc-label-' + (i % 5)">{{ seg.label.replace(/^【|】$/g, '') }}</span><span style="white-space: pre-line;">{{ seg.text }}</span></p>
                 </div>
@@ -494,7 +494,7 @@ const hiddenCount = computed(() => hiddenChallenges.value.filter(c => c.found).l
             </div>
             <!-- 人物介绍浮层 -->
             <div class="absolute bottom-full left-0 right-0 mb-2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
-              <div class="glass-card p-4 border border-gray-600/50 max-h-[220px] overflow-y-auto shadow-xl">
+              <div class="glass-card p-4 border border-gray-600/50 shadow-xl">
                 <div class="text-sm text-gray-300 leading-relaxed text-left">
                   <p v-for="(seg, i) in formatDesc(char.desc)" :key="i"><span v-if="seg.label" class="desc-label" :class="'desc-label-' + (i % 5)">{{ seg.label.replace(/^【|】$/g, '') }}</span><span style="white-space: pre-line;">{{ seg.text }}</span></p>
                 </div>
