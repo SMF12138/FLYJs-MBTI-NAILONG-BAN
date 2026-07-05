@@ -181,17 +181,6 @@ const matchedCharacters = computed(() => {
 const specialMatches = computed(() => matchedCharacters.value.filter(c => c.alignment === 'special').slice(0, 3))
 const baseMatches = computed(() => matchedCharacters.value.filter(c => c.alignment !== 'special').slice(0, 3))
 
-// 天作之合 & 宿世之敌
-const pairing = computed(() => {
-  // 需要用户选择阵营后才显示
-  if (isGreyZone.value && !userAlignment.value) return null
-  const heroName = archetypeResult.value?.heroName
-  if (!heroName) return null
-  const p = getPairing(heroName)
-  if (!p || !p.soulmate || !p.nemesis) return null
-  return p
-})
-
 // ─── 原型+正邪 ───
 const archetypeResult = ref(classifyArchetype(snapshotScores))
 const isGreyZone = computed(() => archetypeResult.value.alignment === 'neutral')
@@ -215,6 +204,16 @@ const finalArchetype = computed(() => {
     desc: display.desc,
     similarity,
   }
+})
+
+// 天作之合 & 宿世之敌（依赖 archetypeResult、isGreyZone、userAlignment）
+const pairing = computed(() => {
+  if (isGreyZone.value && !userAlignment.value) return null
+  const heroName = archetypeResult.value?.heroName
+  if (!heroName) return null
+  const p = getPairing(heroName)
+  if (!p || !p.soulmate || !p.nemesis) return null
+  return p
 })
 
 const chooseAlignment = (align) => {
@@ -412,7 +411,7 @@ const hiddenCount = computed(() => hiddenChallenges.value.filter(c => c.found).l
 
           <!-- 内容区 -->
           <div class="p-6 space-y-4">
-            <div v-for="(paragraph, i) in finalArchetype.desc.split('\n')" :key="i"
+            <div v-for="(paragraph, i) in finalArchetype.desc.split('\n').filter(p => p.trim())" :key="i"
               class="rounded-xl p-4 transition-all duration-200 hover:scale-[1.01]"
               :class="[
                 i % 5 === 0 ? 'bg-gradient-to-r from-violet-500/8 to-purple-500/5 border border-violet-500/15' :
