@@ -193,7 +193,7 @@ const finalArchetype = computed(() => {
   const align = finalAlignment.value
   const uv = userVector.value
   const display = getArchetypeDisplay(r.baseKey, align)
-  const similarity = computeBaseSimilarity(r.traits, uv)
+  const similarity = Math.round(Math.min(100, computeBaseSimilarity(r.traits, uv) * 1.15))
   return {
     ...r,
     alignment: align,

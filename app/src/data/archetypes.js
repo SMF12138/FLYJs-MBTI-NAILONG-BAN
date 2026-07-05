@@ -481,7 +481,9 @@ function getCharacterByName(name) {
   for (const base of Object.values(BASE)) {
     if (base.name === name) return base
   }
-  if (VILLAIN_MAP[name]) return VILLAIN_MAP[name]
+  for (const villain of Object.values(VILLAIN_MAP)) {
+    if (villain.name === name) return villain
+  }
   return null
 }
 
