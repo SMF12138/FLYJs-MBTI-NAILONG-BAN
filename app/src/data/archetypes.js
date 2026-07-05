@@ -406,37 +406,40 @@ function getSpecialTraits(scores) {
   return traits
 }
 
-// ─── 正邪判断（11维度加权） ───
+// ─── 正邪判断（独立双通道 + 百分比阈值） ───
 function calcAlignment(scores) {
   const g = (d) => scores[d] !== undefined ? scores[d] : 50
 
+  // 正派倾向：道德感驱动
   const hero = (
-    g('D7')  * 0.25 +   // 共情 (Batson)
-    g('D9')  * 0.20 +   // 是非 (Kohlberg)
-    g('D10') * 0.15 +   // 羞恶 (Haidt)
-    g('D6')  * 0.10 +   // 荣辱 (Benedict)
-    g('D8')  * 0.10 +   // 信任 (Bowlby)
-    (100 - g('D14')) * 0.10 + // 反贪婪
-    g('D11') * 0.10     // 勇敢
+    g('D7')  * 0.25 +   // 恻隐（Batson）
+    g('D9')  * 0.20 +   // 是非（Kohlberg）
+    g('D10') * 0.20 +   // 羞恶（Haidt）
+    g('D6')  * 0.10 +   // 荣辱（Benedict）
+    g('D8')  * 0.10 +   // 信任（Bowlby）
+    g('D11') * 0.05 +   // 勇敢（轻权重，勇敢≠善良）
+    (100 - g('D14')) * 0.10  // 反贪婪
   )
 
+  // 反派倾向：缺乏约束驱动（懦弱≠邪恶，D11不参与）
   const villain = (
-    (100 - g('D7'))  * 0.25 +
-    (100 - g('D9'))  * 0.15 +
-    (100 - g('D10')) * 0.15 +
-    g('D14') * 0.20 +
-    (100 - g('D8'))  * 0.15 +
-    (100 - g('D6'))  * 0.15
+    (100 - g('D7'))  * 0.20 +   // 缺乏共情
+    (100 - g('D9'))  * 0.20 +   // 缺乏是非
+    (100 - g('D10')) * 0.20 +   // 缺乏羞恶
+    g('D14')         * 0.25 +   // 贪婪（反派核心）
+    (100 - g('D8'))  * 0.10 +   // 多疑
+    (100 - g('D6'))  * 0.05    // 无荣辱感
   )
 
+  // 转百分比
   const total = hero + villain
   const heroPct = total > 0 ? Math.round((hero / total) * 100) : 50
   const villainPct = 100 - heroPct
-  const diff = hero - villain
 
+  // 阈值判定
   let alignment = 'neutral'
-  if (diff > 10) alignment = 'hero'
-  else if (diff < -10) alignment = 'villain'
+  if (heroPct >= 60) alignment = 'hero'
+  else if (heroPct <= 40) alignment = 'villain'
 
   return { alignment, heroPct, villainPct }
 }
