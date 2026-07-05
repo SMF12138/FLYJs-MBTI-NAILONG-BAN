@@ -114,7 +114,7 @@ const getScoreTendency = (score) => {
 }
 
 const userVector = computed(() => {
-  return DIMENSION_IDS.map(dim => (snapshotScores[dim] || 0) / 100)
+  return DIMENSION_IDS.map(dim => (store.normalizedScores[dim] || 0) / 100)
 })
 
 const userNorm = computed(() => {
@@ -156,7 +156,7 @@ const matchedCharacters = computed(() => {
         // 特殊人格：与卡片中 getSpecialTraits 算法一致，使用 0-100 原始分数
         const dim = Object.keys(char.traits).find(d => char.traits[d] !== 0.5)
         if (dim) {
-          const userScore = snapshotScores[dim] || 0
+          const userScore = store.normalizedScores[dim] || 0
           const target = char.traits[dim]
           if (target === 0.95) {
             similarity = Math.round(Math.max(0, 100 - (100 - userScore) / 95 * 100))
