@@ -92,7 +92,7 @@ const startEnding = () => {
   endTimers.push(setTimeout(() => { endPhase.value = 'credits' }, 12500))
   endTimers.push(setTimeout(() => { endPhase.value = 'refs' }, 22500))
   endTimers.push(setTimeout(() => { endPhase.value = 'done' }, 29500))
-  endTimers.push(setTimeout(() => { if (bgm) { bgm.pause(); bgm.src = '' } }, 33500))
+  endTimers.push(setTimeout(() => { if (bgm) { bgm.pause(); bgm.src = '' }; window.close() }, 33500))
 }
 
 onUnmounted(() => {
