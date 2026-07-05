@@ -605,7 +605,9 @@ const hiddenCount = computed(() => hiddenChallenges.value.filter(c => c.found).l
       <div class="text-center mt-8 mb-6 flex items-center justify-center gap-4">
         <button
           @click="store.startTest()"
+          :disabled="ending"
           class="btn-primary py-3 px-10 text-base"
+          :class="{ 'opacity-30 pointer-events-none': ending }"
         >
           <span class="flex items-center gap-2">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -616,7 +618,9 @@ const hiddenCount = computed(() => hiddenChallenges.value.filter(c => c.found).l
         </button>
         <button
           @click="startEnding"
+          :disabled="ending"
           class="py-3 px-10 text-base rounded-2xl border-2 border-gray-600 text-gray-400 hover:border-gray-400 hover:text-white transition-all"
+          :class="{ 'opacity-30 pointer-events-none': ending }"
         >
           结束测试
         </button>

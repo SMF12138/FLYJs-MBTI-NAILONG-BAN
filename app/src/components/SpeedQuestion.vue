@@ -48,7 +48,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (animTimer) { clearTimeout(animTimer); animTimer = null }
-  store.stopSpeedTimer()
 })
 </script>
 
