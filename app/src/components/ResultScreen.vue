@@ -10,32 +10,14 @@ const store = useTestStore()
 // 结果页加载时给分数拍快照，避免后续成就加分改变已展示的角色和匹配
 const snapshotScores = { ...store.normalizedScores }
 
-// 格式化 desc：解析为 [{label, text}] 数组，文本每60字符换行
+// 格式化 desc：解析为 [{label, text}] 数组
 const formatDesc = (desc) => {
   if (!desc) return []
   return desc.trim().split('\n').map(line => line.trim()).filter(Boolean).map(line => {
     const m = line.match(/^(【[^】]+】)(.*)$/)
-    if (!m) return { label: '', text: wrapLine(line, 60) }
-    const label = m[1]
-    const rest = m[2]
-    const maxText = 56
-    if (rest.length <= maxText) return { label, text: rest }
-    const first = rest.slice(0, maxText)
-    const remaining = rest.slice(maxText)
-    return { label, text: first + '\n' + wrapLine(remaining, 60) }
+    if (!m) return { label: '', text: line }
+    return { label: m[1], text: m[2] }
   })
-}
-
-function wrapLine(str, max) {
-  if (str.length <= max) return str
-  const result = []
-  let rest = str
-  while (rest.length > max) {
-    result.push(rest.slice(0, max))
-    rest = rest.slice(max)
-  }
-  if (rest) result.push(rest)
-  return result.join('\n')
 }
 
 const dimNameMap = Object.fromEntries(DIMENSIONS.map(d => [d.id, d.key]))
