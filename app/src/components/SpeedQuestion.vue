@@ -15,9 +15,11 @@ const store = useTestStore()
 const selectedOption = ref(null)
 const isAnimating = ref(false)
 let animTimer = null
+const canSelect = ref(false)
+let selectTimer = null
 
 const handleSelect = (optionId) => {
-  if (isAnimating.value || !store.isSpeedTimerRunning) return
+  if (isAnimating.value || !store.isSpeedTimerRunning || !canSelect.value) return
 
   selectedOption.value = optionId
   isAnimating.value = true
@@ -40,11 +42,16 @@ const timerGlow = computed(() => {
 })
 
 onMounted(() => {
+  canSelect.value = false
   store.startSpeedTimer(props.question.id)
+  selectTimer = setTimeout(() => {
+    canSelect.value = true
+  }, 1000)
 })
 
 onUnmounted(() => {
   if (animTimer) { clearTimeout(animTimer); animTimer = null }
+  if (selectTimer) { clearTimeout(selectTimer); selectTimer = null }
 })
 </script>
 
@@ -83,13 +90,13 @@ onUnmounted(() => {
         v-for="option in question.options"
         :key="option.id"
         @click="handleSelect(option.id)"
-        :disabled="isAnimating || !store.isSpeedTimerRunning"
+        :disabled="isAnimating || !store.isSpeedTimerRunning || !canSelect"
         class="w-full text-left p-6 rounded-2xl transition-all duration-200 border-2 text-lg group glass-card border-transparent hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-500/10"
         :class="[
           selectedOption === option.id
             ? 'bg-amber-500/20 border-amber-500 shadow-lg shadow-amber-500/20 scale-[1.02]'
             : '',
-          (isAnimating || !store.isSpeedTimerRunning) && selectedOption !== option.id
+          (isAnimating || !store.isSpeedTimerRunning || !canSelect) && selectedOption !== option.id
             ? 'opacity-40'
             : ''
         ]"

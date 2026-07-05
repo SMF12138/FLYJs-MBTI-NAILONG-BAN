@@ -209,10 +209,12 @@ const finalArchetype = computed(() => {
 // 天作之合 & 宿世之敌（依赖 archetypeResult、isGreyZone、userAlignment）
 const pairing = computed(() => {
   if (isGreyZone.value && !userAlignment.value) return null
+  // 用用户实际显示名查找（正派/反派各有独立配对）
+  const displayName = finalArchetype.value?.name
   const heroName = archetypeResult.value?.heroName
   const villainName = archetypeResult.value?.villainName
-  if (!heroName) return null
-  const p = getPairing(heroName)
+  if (!displayName) return null
+  const p = getPairing(displayName) || getPairing(heroName)
   if (!p || !p.soulmate || !p.nemesis) return null
   // 排除用户自己的正派名和反派名
   const ownNames = new Set([heroName, villainName].filter(Boolean))
