@@ -286,6 +286,7 @@ html {
   animation: scanline 6s linear infinite;
   pointer-events: none;
   z-index: 100;
+  will-change: transform;
 }
 
 /* ========== 打字机光标 ========== */
@@ -334,6 +335,7 @@ html {
   border-radius: 50%;
   pointer-events: none;
   opacity: 0;
+  will-change: transform, opacity;
 }
 
 @keyframes particle-float {

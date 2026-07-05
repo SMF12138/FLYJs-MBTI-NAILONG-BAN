@@ -21,32 +21,33 @@ const adTextsList = [
 ]
 
 const adAudioSources = ['/ad1.wav', '/ad2.wav', '/ad3.wav', '/ad4.wav', '/ad5.wav']
-const activeAudios = ref([])
+const activeAudios = []
 const pendingTextTimeouts = new Set()
 const adStartTimeouts = []
 
 const onAudioEnded = (audio, eventHandler) => {
   audio.removeEventListener('ended', eventHandler)
   audio.src = ''
-  activeAudios.value = activeAudios.value.filter(a => a !== audio)
+  const idx = activeAudios.indexOf(audio)
+  if (idx !== -1) activeAudios.splice(idx, 1)
   if (elapsedSeconds.value < 30) playRandomAd()
 }
 
 const playRandomAd = () => {
-  const available = adAudioSources.filter(src => !activeAudios.value.some(a => a.src && a.src.endsWith(src.split('/').pop())))
+  const available = adAudioSources.filter(src => !activeAudios.some(a => a.src && a.src.endsWith(src.split('/').pop())))
   if (available.length === 0) return
   const src = available[Math.floor(Math.random() * available.length)]
   const audio = new Audio(src)
   audio.volume = 0.6
-  activeAudios.value.push(audio)
+  activeAudios.push(audio)
   audio.play().catch(() => {})
   const handler = () => onAudioEnded(audio, handler)
   audio.addEventListener('ended', handler)
 }
 
 const stopAllAudio = () => {
-  activeAudios.value.forEach(a => { a.pause(); a.src = '' })
-  activeAudios.value = []
+  activeAudios.forEach(a => { a.pause(); a.src = '' })
+  activeAudios.length = 0
 }
 
 const generateText = () => {
