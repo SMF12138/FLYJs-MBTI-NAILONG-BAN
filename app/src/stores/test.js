@@ -287,11 +287,6 @@ export const useTestStore = defineStore('test', {
       this.closeInvitation()
     },
 
-    closeInvitation() {
-      this.showInvitation = false
-      this.currentStage = 'normal'
-    },
-
     closeInvitationWithoutClick() {
       this._invitationPath = 'viewNoHidden'
       this.dimensionScores.D8 += 0.5 * 3

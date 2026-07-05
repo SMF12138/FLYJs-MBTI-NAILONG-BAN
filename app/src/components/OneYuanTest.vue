@@ -22,6 +22,7 @@ const handleConfirm = () => {
 }
 
 const handleCancel = () => {
+  if (prankTimeout) { clearTimeout(prankTimeout); prankTimeout = null }
   const isQuick = clickTime.value && (Date.now() - clickTime.value < 2000)
   store.handle1YuanCancel(isQuick)
 }

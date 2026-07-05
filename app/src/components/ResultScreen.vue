@@ -24,18 +24,24 @@ const dimNameMap = Object.fromEntries(DIMENSIONS.map(d => [d.id, d.key]))
 const dimColorMap = Object.fromEntries(DIMENSIONS.map(d => [d.id, d.color]))
 const dimDescMap = Object.fromEntries(DIMENSIONS.map(d => [d.id, d.desc]))
 const selectedDim = ref(null)
-const liked = ref(localStorage.getItem('mbti_liked') === 'true')
-const likeCount = ref(Number(localStorage.getItem('mbti_like_count')) || 0)
+const liked = ref(false)
+const likeCount = ref(0)
+
+try {
+  liked.value = localStorage.getItem('mbti_liked') === 'true'
+  likeCount.value = Number(localStorage.getItem('mbti_like_count')) || 0
+} catch (e) {}
 
 const handleLike = () => {
   if (liked.value) return
   liked.value = true
-  localStorage.setItem('mbti_liked', 'true')
-  const prev = Number(localStorage.getItem('mbti_like_count')) || 0
-  // 首次点赞时给一个人气基数（演示用），之后累加
-  const next = Math.max(prev + 1, Math.floor(Math.random() * 4001) + 1000)
-  likeCount.value = next
-  localStorage.setItem('mbti_like_count', String(next))
+  try {
+    localStorage.setItem('mbti_liked', 'true')
+    const prev = Number(localStorage.getItem('mbti_like_count')) || 0
+    const next = Math.max(prev + 1, Math.floor(Math.random() * 4001) + 1000)
+    likeCount.value = next
+    localStorage.setItem('mbti_like_count', String(next))
+  } catch (e) {}
   store.dimensionScores.D7 += 1
   store.normalizeScores()
 }
@@ -288,6 +294,7 @@ const hiddenCount = computed(() => hiddenChallenges.value.filter(c => c.found).l
             class="group glass-card p-6 text-center cursor-pointer border-2 border-yellow-500/30 hover:border-yellow-400 hover:bg-yellow-500/5 transition-all duration-300"
           >
             <img :src="archetypeResult.heroImg" :alt="archetypeResult.heroName"
+              @error="$event.target.style.display='none'"
               class="w-32 h-32 rounded-full mx-auto mb-3 object-cover border-2 border-yellow-500/30 group-hover:scale-105 transition-transform" />
             <h3 class="text-lg font-bold text-yellow-400 mb-1">{{ archetypeResult.heroName }}</h3>
             <p class="text-sm text-gray-500">选择光明之路</p>
@@ -297,6 +304,7 @@ const hiddenCount = computed(() => hiddenChallenges.value.filter(c => c.found).l
             class="group glass-card p-6 text-center cursor-pointer border-2 border-red-500/30 hover:border-red-400 hover:bg-red-500/5 transition-all duration-300"
           >
             <img :src="archetypeResult.villainImg" :alt="archetypeResult.villainName"
+              @error="$event.target.style.display='none'"
               class="w-32 h-32 rounded-full mx-auto mb-3 object-cover border-2 border-red-500/30 group-hover:scale-105 transition-transform" />
             <h3 class="text-lg font-bold text-red-400 mb-1">{{ archetypeResult.villainName }}</h3>
             <p class="text-sm text-gray-500">选择暗影之路</p>
