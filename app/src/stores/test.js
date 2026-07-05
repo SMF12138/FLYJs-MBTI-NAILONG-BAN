@@ -419,6 +419,7 @@ export const useTestStore = defineStore('test', {
     answerSpeedQuestion(questionId, optionId) {
       const question = this.speedQs.find(q => q.id === questionId)
       if (!question) return
+      if (this._pendingNextAfterEffect) return
 
       if (this._scoredQuestions.has(questionId)) return
       this._scoredQuestions.add(questionId)

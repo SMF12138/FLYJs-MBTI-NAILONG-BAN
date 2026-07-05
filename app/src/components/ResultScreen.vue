@@ -78,6 +78,8 @@ const references = [
 const bgmCredit = 'Music: "The Past" by TAD — licensed under CC BY 4.0\nSource: https://opengameart.org/content/the-past'
 
 const startEnding = () => {
+  endTimers.forEach(t => clearTimeout(t))
+  endTimers.length = 0
   ending.value = true
   endPhase.value = 'shaking'
   // 清理旧音频再创建新的
