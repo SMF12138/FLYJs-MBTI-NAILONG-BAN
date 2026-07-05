@@ -23,6 +23,30 @@ let particleInterval = null
 const MAX_PARTICLES = 30
 const pendingTimeouts = new Set()
 
+// 全局按钮点击音效
+let audioCtx = null
+const playClick = () => {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+    const osc = audioCtx.createOscillator()
+    const gain = audioCtx.createGain()
+    osc.connect(gain)
+    gain.connect(audioCtx.destination)
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(800, audioCtx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.08)
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08)
+    osc.start(audioCtx.currentTime)
+    osc.stop(audioCtx.currentTime + 0.08)
+  } catch (e) {}
+}
+
+const handleGlobalClick = (e) => {
+  const btn = e.target.closest('button, [role="button"], .btn-primary, .glass-card-hover')
+  if (btn) playClick()
+}
+
 const handleAnswer = (questionId, optionId) => {
   store.answerQuestion(questionId, optionId)
 }
@@ -71,6 +95,7 @@ const createParticle = () => {
 onMounted(() => {
   particleInterval = setInterval(createParticle, 300)
   window.addEventListener('keydown', handleKeydown)
+  window.addEventListener('click', handleGlobalClick)
 })
 
 onUnmounted(() => {
@@ -78,6 +103,7 @@ onUnmounted(() => {
   pendingTimeouts.forEach(tid => clearTimeout(tid))
   pendingTimeouts.clear()
   window.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('click', handleGlobalClick)
 })
 
 // 测试者特权：↑↓切换题目
