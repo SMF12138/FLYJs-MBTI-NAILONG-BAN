@@ -562,7 +562,8 @@ export function getAllCharacters() {
       verse: char.verse,
       desc: char.desc,
       traits,
-      alignment: 'special'
+      alignment: 'special',
+      type: char.type
     })
   })
 
