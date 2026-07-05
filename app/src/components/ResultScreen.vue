@@ -183,8 +183,14 @@ const baseMatches = computed(() => matchedCharacters.value.filter(c => c.alignme
 
 // 天作之合 & 宿世之敌
 const pairing = computed(() => {
-  const name = finalArchetype.value?.name
-  return name ? getPairing(name) : null
+  const displayName = finalArchetype.value?.name
+  const heroName = archetypeResult.value?.heroName
+  // 先用显示名查，查不到用正派名查
+  let result = displayName ? getPairing(displayName) : null
+  if (!result && heroName) {
+    result = getPairing(heroName)
+  }
+  return result
 })
 
 // ─── 原型+正邪 ───
