@@ -8,10 +8,88 @@ const hpPercent = computed(() => (store.hp / store.maxHp) * 100)
 
 const timers = []
 
+// 音效生成
+let audioCtx = null
+const getCtx = () => {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+  return audioCtx
+}
+
+// 血条碎裂音：短促噪音冲击
+const playShatter = () => {
+  try {
+    const ctx = getCtx()
+    const bufferSize = ctx.sampleRate * 0.15
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.03))
+    }
+    const src = ctx.createBufferSource()
+    src.buffer = buffer
+    const gain = ctx.createGain()
+    gain.gain.setValueAtTime(0.25, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15)
+    src.connect(gain).connect(ctx.destination)
+    src.start()
+  } catch (e) {}
+}
+
+// 光波音：低频到高频扫频 + 冲击波
+const playWave = () => {
+  try {
+    const ctx = getCtx()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(60, ctx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.2)
+    osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.5)
+    gain.gain.setValueAtTime(0.2, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.5)
+    // 叠加白噪冲击
+    const bufSize = ctx.sampleRate * 0.3
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate)
+    const d = buf.getChannelData(0)
+    for (let i = 0; i < bufSize; i++) {
+      d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.05))
+    }
+    const nSrc = ctx.createBufferSource()
+    nSrc.buffer = buf
+    const nGain = ctx.createGain()
+    nGain.gain.setValueAtTime(0.12, ctx.currentTime)
+    nGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3)
+    nSrc.connect(nGain).connect(ctx.destination)
+    nSrc.start()
+  } catch (e) {}
+}
+
+// 文字放大音：深沉低频冲击
+const playBoom = () => {
+  try {
+    const ctx = getCtx()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(120, ctx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + 0.6)
+    gain.gain.setValueAtTime(0.3, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6)
+    osc.start()
+    osc.stop(ctx.currentTime + 0.6)
+  } catch (e) {}
+}
+
 onMounted(() => {
-  timers.push(setTimeout(() => { phase.value = 1 }, 400))
-  timers.push(setTimeout(() => { phase.value = 2 }, 2000))
-  timers.push(setTimeout(() => { phase.value = 3 }, 3600))
+  timers.push(setTimeout(() => { phase.value = 1; playShatter() }, 400))
+  timers.push(setTimeout(() => { phase.value = 2; playWave() }, 2000))
+  timers.push(setTimeout(() => { phase.value = 3; playBoom() }, 3600))
 })
 
 onUnmounted(() => {
