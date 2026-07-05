@@ -83,6 +83,63 @@ const VILLAIN_MAP = {
     desc: '【认知风格】你对环境信息的感知能力极低，不善于捕捉他人的情绪变化和需求。思维模式极度务实，只关注"有没有用"而非"对不对"。\n【创造力】几乎没有创造欲望，不追求新事物，也不尝试改变现状。既定规则就是全部，打破规则毫无意义。\n【社交风格】社交需求为零，完全不需要与人建立连接。不是回避，而是从生理层面就不产生社交冲动。别人的存在对他而言如同背景噪音。\n【情绪特征】情感反应极度迟钝，喜怒哀乐的阈值远高于常人。不是压抑情感，而是情感系统的灵敏度本身就极低。面对任何刺激都波澜不惊。\n【核心倾向】高度低共情特质——情感共鸣能力较弱，行为更受目标驱动。' },
 }
 
+// ─── 天作之合 & 宿世之敌（32基础角色各一对） ───
+const PAIRINGS = {
+  '天命织者': { soulmate: '白月光小猫', nemesis: '黑幕' },
+  '末日歌者': { soulmate: '花栗鼠大人', nemesis: '暗潮煽动者' },
+  '暗夜守护者': { soulmate: '龙王', nemesis: '暗夜猎杀者' },
+  '梦泪拾荒者': { soulmate: '痴儿', nemesis: '蚀心者' },
+  '龙王': { soulmate: '暗夜守护者', nemesis: '屠龙者' },
+  '黑幕': { soulmate: '暮日祈祷者', nemesis: '视奸者' },
+  '白月光小猫': { soulmate: '天命织者', nemesis: '黑化小猫' },
+  '心碎梨花猫': { soulmate: '梦逝者', nemesis: '嗜血梨花猫' },
+  '奶龙': { soulmate: '痴儿', nemesis: '奶虫' },
+  '梦逝者': { soulmate: '心碎梨花猫', nemesis: '梦魇' },
+  '创世神': { soulmate: '孤者', nemesis: '灭世者' },
+  '低语者': { soulmate: '末日歌者', nemesis: '蛊惑者' },
+  '花栗鼠大人': { soulmate: '末日歌者', nemesis: '鼠王' },
+  '暮日祈祷者': { soulmate: '黑幕', nemesis: '暮日审判者' },
+  '痴儿': { soulmate: '奶龙', nemesis: '狂者' },
+  '孤者': { soulmate: '创世神', nemesis: '死神' },
+  '天命收割者': { soulmate: '暗夜猎杀者', nemesis: '天命织者' },
+  '暗潮煽动者': { soulmate: '蛊惑者', nemesis: '末日歌者' },
+  '暗夜猎杀者': { soulmate: '天命收割者', nemesis: '暗夜守护者' },
+  '蚀心者': { soulmate: '嗜血梨花猫', nemesis: '梦泪拾荒者' },
+  '屠龙者': { soulmate: '灭世者', nemesis: '龙王' },
+  '视奸者': { soulmate: '暗潮煽动者', nemesis: '黑幕' },
+  '黑化小猫': { soulmate: '梦魇', nemesis: '白月光小猫' },
+  '嗜血梨花猫': { soulmate: '蚀心者', nemesis: '心碎梨花猫' },
+  '奶虫': { soulmate: '狂者', nemesis: '奶龙' },
+  '梦魇': { soulmate: '黑化小猫', nemesis: '梦逝者' },
+  '灭世者': { soulmate: '屠龙者', nemesis: '创世神' },
+  '蛊惑者': { soulmate: '暗潮煽动者', nemesis: '低语者' },
+  '鼠王': { soulmate: '暮日审判者', nemesis: '花栗鼠大人' },
+  '暮日审判者': { soulmate: '鼠王', nemesis: '暮日祈祷者' },
+  '狂者': { soulmate: '奶虫', nemesis: '痴儿' },
+  '死神': { soulmate: '灭世者', nemesis: '孤者' },
+}
+
+function getCharacterByName(name) {
+  // 在 BASE 中查找
+  for (const base of Object.values(BASE)) {
+    if (base.name === name) return base
+  }
+  // 在 VILLAIN_MAP 中查找
+  if (VILLAIN_MAP[name]) return VILLAIN_MAP[name]
+  return null
+}
+
+export function getPairing(characterName) {
+  const pairing = PAIRINGS[characterName]
+  if (!pairing) return null
+  const soulmate = getCharacterByName(pairing.soulmate)
+  const nemesis = getCharacterByName(pairing.nemesis)
+  return {
+    soulmate: soulmate ? { name: soulmate.name, img: soulmate.img, verse: soulmate.verse } : null,
+    nemesis: nemesis ? { name: nemesis.name, img: nemesis.img, verse: nemesis.verse } : null,
+  }
+}
+
 // ─── 30个特殊人格（维度极端值触发） ───
 // 高分>95 或 低分<5 时叠加到原型上，不覆盖原型
 const SPECIAL_HIGH = {

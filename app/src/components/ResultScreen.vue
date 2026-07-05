@@ -2,7 +2,7 @@
 import { computed, ref, onUnmounted } from 'vue'
 import { useTestStore } from '../stores/test'
 import { DIMENSIONS, DIMENSION_IDS } from '../data/dimensions'
-import { classifyArchetype, getArchetypeDisplay, getAllCharacters } from '../data/archetypes'
+import { classifyArchetype, getArchetypeDisplay, getAllCharacters, getPairing } from '../data/archetypes'
 import RadarChart from './RadarChart.vue'
 
 const store = useTestStore()
@@ -180,6 +180,12 @@ const matchedCharacters = computed(() => {
 
 const specialMatches = computed(() => matchedCharacters.value.filter(c => c.alignment === 'special').slice(0, 3))
 const baseMatches = computed(() => matchedCharacters.value.filter(c => c.alignment !== 'special').slice(0, 3))
+
+// 天作之合 & 宿世之敌
+const pairing = computed(() => {
+  const name = finalArchetype.value?.name
+  return name ? getPairing(name) : null
+})
 
 // ─── 原型+正邪 ───
 const archetypeResult = ref(classifyArchetype(snapshotScores))
@@ -516,6 +522,41 @@ const hiddenCount = computed(() => hiddenChallenges.value.filter(c => c.found).l
         <p class="mt-4 text-sm text-amber-400 text-center font-medium px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
           特殊人格由单维度标准触发，匹配度仅供参考，排行不计入总测试结果
         </p>
+      </div>
+
+      <!-- 天作之合 & 宿世之敌 -->
+      <div v-if="pairing && pairing.soulmate && pairing.nemesis" class="grid grid-cols-2 gap-4 mb-6">
+        <!-- 天作之合 -->
+        <div class="glass-card p-5 border border-pink-500/20 bg-gradient-to-br from-pink-500/5 to-orange-500/5">
+          <h3 class="text-sm font-bold text-pink-400 mb-3 flex items-center gap-2">
+            <span class="text-lg">💕</span> 天作之合
+          </h3>
+          <div class="flex items-center gap-3">
+            <img :src="pairing.soulmate.img" :alt="pairing.soulmate.name"
+              class="w-14 h-14 rounded-full object-cover border-2 border-pink-500/30"
+              @error="$event.target.style.display='none'" />
+            <div class="flex-1 min-w-0">
+              <p class="text-white font-bold text-base truncate">{{ pairing.soulmate.name }}</p>
+              <p class="text-gray-400 text-sm truncate mt-1">{{ pairing.soulmate.verse }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 宿世之敌 -->
+        <div class="glass-card p-5 border border-red-500/20 bg-gradient-to-br from-red-500/5 to-purple-500/5">
+          <h3 class="text-sm font-bold text-red-400 mb-3 flex items-center gap-2">
+            <span class="text-lg">⚔️</span> 宿世之敌
+          </h3>
+          <div class="flex items-center gap-3">
+            <img :src="pairing.nemesis.img" :alt="pairing.nemesis.name"
+              class="w-14 h-14 rounded-full object-cover border-2 border-red-500/30"
+              @error="$event.target.style.display='none'" />
+            <div class="flex-1 min-w-0">
+              <p class="text-white font-bold text-base truncate">{{ pairing.nemesis.name }}</p>
+              <p class="text-gray-400 text-sm truncate mt-1">{{ pairing.nemesis.verse }}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 分数详情 -->
