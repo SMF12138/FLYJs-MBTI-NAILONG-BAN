@@ -210,9 +210,13 @@ const finalArchetype = computed(() => {
 const pairing = computed(() => {
   if (isGreyZone.value && !userAlignment.value) return null
   const heroName = archetypeResult.value?.heroName
+  const villainName = archetypeResult.value?.villainName
   if (!heroName) return null
   const p = getPairing(heroName)
   if (!p || !p.soulmate || !p.nemesis) return null
+  // 排除用户自己的正派名和反派名
+  const ownNames = new Set([heroName, villainName].filter(Boolean))
+  if (ownNames.has(p.soulmate.name) || ownNames.has(p.nemesis.name)) return null
   return p
 })
 
