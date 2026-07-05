@@ -22,12 +22,9 @@ const handleSelect = (optionId) => {
   selectedOption.value = optionId
   isAnimating.value = true
 
-  animTimer = setTimeout(() => {
-    emit('answer', props.question.id, optionId)
-    selectedOption.value = null
-    isAnimating.value = false
-    animTimer = null
-  }, 400)
+  emit('answer', props.question.id, optionId)
+  selectedOption.value = null
+  isAnimating.value = false
 }
 
 const timerColor = computed(() => {
