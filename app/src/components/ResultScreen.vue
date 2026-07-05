@@ -181,16 +181,12 @@ const matchedCharacters = computed(() => {
 const specialMatches = computed(() => matchedCharacters.value.filter(c => c.alignment === 'special').slice(0, 3))
 const baseMatches = computed(() => matchedCharacters.value.filter(c => c.alignment !== 'special').slice(0, 3))
 
-// 天作之合 & 宿世之敌
+// 天作之合 & 宿世之敌（基于正派基础名查找，灰色地带选择后才显示）
 const pairing = computed(() => {
-  const displayName = finalArchetype.value?.name
+  if (showChoice.value) return null
   const heroName = archetypeResult.value?.heroName
-  // 先用显示名查，查不到用正派名查
-  let result = displayName ? getPairing(displayName) : null
-  if (!result && heroName) {
-    result = getPairing(heroName)
-  }
-  return result
+  if (!heroName) return null
+  return getPairing(heroName)
 })
 
 // ─── 原型+正邪 ───
