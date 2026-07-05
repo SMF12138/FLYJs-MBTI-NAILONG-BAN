@@ -426,6 +426,7 @@ export const useTestStore = defineStore('test', {
 
       const option = question.options.find(o => o.id === optionId)
       if (option && option.hpCost) {
+        this._scoredQuestions.add(questionId)
         this.loseHp(option.hpCost)
         this._pendingNextAfterEffect = true
         this._pendingAnswer = { questionId, optionId, isSpeed: true }
