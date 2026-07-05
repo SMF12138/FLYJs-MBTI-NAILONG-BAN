@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { useTestStore } from '../stores/test'
 
 const store = useTestStore()
@@ -8,8 +8,13 @@ const cardNumber = ref('')
 const clickTime = ref(null)
 const inputError = ref('')
 const showPrank = ref(false)
+let prankTimeout = null
 
 const isValidCard = (num) => /^\d{10,19}$/.test(num)
+
+onUnmounted(() => {
+  if (prankTimeout) clearTimeout(prankTimeout)
+})
 
 const handleConfirm = () => {
   const isQuick = clickTime.value && (Date.now() - clickTime.value < 2000)
@@ -29,7 +34,7 @@ const handleInput = () => {
   if (isValidCard(cardNumber.value.trim())) {
     inputError.value = ''
     showPrank.value = true
-    setTimeout(() => {
+    prankTimeout = setTimeout(() => {
       store.handle1YuanInput(true)
     }, 2500)
   } else {
@@ -41,29 +46,30 @@ clickTime.value = Date.now()
 </script>
 
 <template>
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-40 p-4">
+  <div class="fixed inset-0 bg-black/70 flex items-center justify-center z-40 p-4 backdrop-blur-sm">
     <!-- 恶搞提示 -->
-    <div v-if="showPrank" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 animate-fade-in">
-      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center mx-4">
-        <div class="text-5xl mb-4">😜</div>
-        <p class="text-gray-800 text-lg font-medium leading-relaxed">
+    <div v-if="showPrank" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 animate-fade-in">
+      <div class="glass-card max-w-md w-full p-8 text-center mx-4 glow-border">
+        <div class="text-5xl mb-4 animate-bounce">😜</div>
+        <p class="text-white text-lg font-medium leading-relaxed">
           嘻嘻，骗你的，作者是个穷B给不起米，这其实也是测试的一部分
         </p>
       </div>
     </div>
 
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in">
+    <div class="glass-card max-w-md w-full overflow-hidden animate-fade-in glow-border">
       <!-- 标题 -->
-      <div class="bg-gradient-to-r from-primary to-secondary p-5 text-white text-center">
-        <h2 class="text-lg font-bold mb-1">感谢参与！</h2>
-        <p class="text-white/80 text-sm">本游戏正处于测试版</p>
+      <div class="bg-gradient-to-r from-purple-600 to-cyan-600 p-5 text-white text-center relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-cyan-600/20 animate-pulse"></div>
+        <h2 class="text-lg font-bold mb-1 relative z-10">感谢参与！</h2>
+        <p class="text-white/80 text-sm relative z-10">本游戏正处于测试版</p>
       </div>
       
       <!-- 内容 -->
       <div class="p-6">
-        <p class="text-gray-600 mb-5 text-center text-sm">
+        <p class="text-gray-300 mb-5 text-center text-sm">
           输入您的支付宝/银行卡号，点击确定即可获得
-          <span class="text-primary font-bold">1元</span>
+          <span class="text-cyan-400 font-bold">1元</span>
           奖励
         </p>
         
@@ -76,16 +82,16 @@ clickTime.value = Date.now()
             pattern="[0-9]*"
             maxlength="19"
             placeholder="请输入银行卡号（10-19位数字）"
-            class="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-primary focus:outline-none text-sm"
+            class="w-full px-4 py-3 bg-gray-900/50 border-2 border-gray-700 rounded-xl focus:border-purple-500 focus:outline-none text-sm text-white placeholder-gray-500 transition-colors"
           />
-          <p v-if="inputError" class="text-red-500 text-xs mt-1">{{ inputError }}</p>
+          <p v-if="inputError" class="text-red-400 text-xs mt-2">{{ inputError }}</p>
         </div>
         
         <!-- 按钮 -->
         <div class="flex gap-3">
           <button 
             @click="handleCancel"
-            class="flex-1 py-2.5 px-5 border-2 border-gray-200 rounded-xl text-gray-600 text-sm hover:border-gray-300 hover:bg-gray-50 transition-colors"
+            class="flex-1 py-2.5 px-5 border-2 border-gray-700 rounded-xl text-gray-400 text-sm hover:border-gray-500 hover:text-gray-200 transition-colors"
           >
             取消
           </button>
@@ -93,7 +99,7 @@ clickTime.value = Date.now()
           <button 
             v-if="store.yuanTestStage === 'confirm'"
             @click="handleConfirm"
-            class="flex-1 py-2.5 px-5 bg-gradient-to-r from-primary to-secondary text-white rounded-xl hover:opacity-90 transition-opacity text-sm"
+            class="flex-1 py-2.5 px-5 bg-gradient-to-r from-purple-600 to-cyan-600 text-white rounded-xl hover:opacity-90 transition-opacity text-sm"
           >
             确定
           </button>
@@ -101,7 +107,7 @@ clickTime.value = Date.now()
           <button 
             v-else
             @click="handleInput"
-            class="flex-1 py-2.5 px-5 bg-gradient-to-r from-primary to-secondary text-white rounded-xl hover:opacity-90 transition-opacity text-sm"
+            class="flex-1 py-2.5 px-5 bg-gradient-to-r from-purple-600 to-cyan-600 text-white rounded-xl hover:opacity-90 transition-opacity text-sm"
           >
             提交
           </button>

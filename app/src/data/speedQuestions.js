@@ -18,7 +18,8 @@ export const speedQuestions = [
       D9: { A: -0.8, B: 0.5, C: 0, D: 0, weight: 2 },
       D6: { A: 0.3, B: 0, C: 0, D: 0, weight: 1 },
       D10: { A: -0.8, B: 0.5, C: 0, D: 0.2, weight: 2 },
-      D1: { A: 0, B: 0.5, C: -0.5, D: 0.2, weight: 2 }
+      D1: { A: 0, B: 0.5, C: -0.5, D: 0.2, weight: 2 },
+      D15: { A: 0.5, B: 0, C: -0.3, D: 0.8, weight: 2 }  // 新增D15维度
     }
   },
 
@@ -38,7 +39,8 @@ export const speedQuestions = [
     dimensions: {
       D4: { A: -0.8, B: 0.8, C: 0.3, D: 0.8, weight: 3 },
       D8: { A: -0.5, B: 0.5, C: 0.3, D: 0, weight: 2 },
-      D7: { A: -0.3, B: 0.3, C: 0.5, D: 0.5, weight: 2 }
+      D7: { A: -0.3, B: 0.3, C: 0.5, D: 0.5, weight: 2 },
+      D15: { A: -0.5, B: 0.5, C: 0.3, D: 0.8, weight: 2 }  // 新增D15维度
     }
   },
 
@@ -57,7 +59,8 @@ export const speedQuestions = [
       D13: { A: -0.3, B: 0.5, weight: 2 },
       D12: { A: -0.3, B: 0.5, weight: 2 },
       D4: { A: 0.3, B: 0.5, weight: 2 },
-      D5: { A: 0.5, B: -0.3, weight: 2 }
+      D5: { A: 0.5, B: -0.3, weight: 2 },
+      D15: { A: 0.3, B: 0.5, weight: 2 }  // 新增D15维度
     }
   },
 
@@ -77,7 +80,8 @@ export const speedQuestions = [
       D13: { A: 0, B: 0.5, C: 0, weight: 2 },
       D5: { A: 0, B: 0.5, C: -0.3, weight: 2 },
       D12: { A: 0, B: -0.3, C: 0.3, weight: 1 },
-      D6: { A: 0, B: 0, C: 0.5, weight: 1 }
+      D6: { A: 0, B: 0, C: 0.5, weight: 1 },
+      D15: { A: 0, B: 0.5, C: 0, weight: 1 }  // 新增D15维度
     }
   },
 
@@ -98,7 +102,8 @@ export const speedQuestions = [
       D8: { A: 0.8, B: 0.2, weight: 2 },
       D10: { A: 1.0, B: 0, weight: 1 },
       D14: { A: -1.0, B: 0, weight: 1 },
-      D6: { A: -0.8, B: 0.8, weight: 2 }
+      D6: { A: -0.8, B: 0.8, weight: 2 },
+      D15: { A: 0.5, B: 0, weight: 1 }  // 新增D15维度
     }
   },
 
@@ -119,7 +124,8 @@ export const speedQuestions = [
       D5: { A: 0.3, B: 0, C: 0, D: 0, weight: 2 },
       D11: { A: 0.3, B: 0, C: 0, D: 0, weight: 1 },
       D1: { A: 0.5, B: 0, C: 0, D: -0.3, weight: 3 },
-      D3: { A: 0.5, B: 0, C: 0, D: 0, weight: 2 }
+      D3: { A: 0.5, B: 0, C: 0, D: 0, weight: 2 },
+      D15: { A: 0, B: 0, C: 0.5, D: -0.3, weight: 2 }  // 新增D15维度
     }
   },
 
@@ -138,7 +144,8 @@ export const speedQuestions = [
       D11: { A: 1.0, B: 0, weight: 3 },
       D4: { A: 0.9, B: 0.2, weight: 2 },
       D8: { A: 0.9, B: 0.1, weight: 2 },
-      D3: { A: 1.0, B: 0, weight: 2 }
+      D3: { A: 1.0, B: 0, weight: 2 },
+      D15: { A: 0.5, B: 0, weight: 2 }  // 新增D15维度
     }
   },
 
@@ -159,7 +166,8 @@ export const speedQuestions = [
       D8: { A: 0.8, B: 0.2, weight: 4 },
       D10: { A: 1.0, B: 0, weight: 2 },
       D14: { A: -1.0, B: 0, weight: 2 },
-      D6: { A: -0.8, B: 0.8, weight: 4 }
+      D6: { A: -0.8, B: 0.8, weight: 4 },
+      D15: { A: 0.5, B: 0, weight: 2 }  // 新增D15维度
     }
   }
 ]
