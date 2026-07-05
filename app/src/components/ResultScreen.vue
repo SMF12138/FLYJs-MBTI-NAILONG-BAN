@@ -74,7 +74,8 @@ const bgmCredit = 'Music: "The Past" by TAD — licensed under CC BY 4.0\nSource
 const startEnding = () => {
   ending.value = true
   endPhase.value = 'shaking'
-  // 播放背景音乐
+  // 清理旧音频再创建新的
+  if (bgm) { bgm.pause(); bgm.src = ''; bgm = null }
   bgm = new Audio('/the-past.mp3')
   bgm.volume = 0.5
   bgm.loop = true

@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 
 const props = defineProps({
   question: {
@@ -16,6 +16,7 @@ const emit = defineEmits(['answer'])
 
 const selectedOption = ref(null)
 const isAnimating = ref(false)
+let animTimer = null
 
 const handleSelect = (optionId) => {
   if (isAnimating.value) return
@@ -23,12 +24,17 @@ const handleSelect = (optionId) => {
   selectedOption.value = optionId
   isAnimating.value = true
 
-  setTimeout(() => {
+  animTimer = setTimeout(() => {
     emit('answer', props.question.id, optionId)
     selectedOption.value = null
     isAnimating.value = false
+    animTimer = null
   }, 600)
 }
+
+onUnmounted(() => {
+  if (animTimer) { clearTimeout(animTimer); animTimer = null }
+})
 </script>
 
 <template>
