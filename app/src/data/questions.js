@@ -14,7 +14,7 @@ export const normalQuestions = [
       D11: { A: 1.0, B: 0.2, C: -0.8, weight: 3 },
       D3: { A: 0.8, B: 0.5, C: 0.2, weight: 2 },
       D12: { A: 0.5, B: 0.8, C: -0.8, weight: 2 },
-      D5: { A: 0.2, B: 0, C: 0.5, weight: 2 },
+      D5: { A: 0.5, B: 0.2, C: 0, weight: 2 },
       D14: { A: 0, B: 0, C: -0.3, weight: 2 },
       D7: { A: 0.6, B: 0.6, C: -0.2, weight: 4 },
       D13: { A: -0.5, B: 0.2, C: 0.8, weight: 2 }

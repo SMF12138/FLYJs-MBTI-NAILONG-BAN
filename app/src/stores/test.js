@@ -540,35 +540,33 @@ export const useTestStore = defineStore('test', {
       this.normalizeScores()
     },
 
-    // ─── 分数归一化（基于每个维度独立计算理论最大/最小，按实际得分比例映射）───
+    // ─── 分数归一化（包含题目 + 彩蛋 + 隐藏题 + 1元测试）───
     // 核心原则：
-    // 1. 每个维度独立计算，只考虑涉及该维度的题目
-    // 2. 理论最大值 = 所有涉及题都选该维度最高分
-    // 3. 理论最小值 = 所有涉及题都选该维度最低分
-    // 4. 题目分数映射到 [0, 100]，彩蛋分数作为额外加分
-    // 5. 最终分数 = 映射分 + 彩蛋分，上限 100
-    // 6. 未涉及维度 = 0（不是 50）
+    // 1. 所有来源（题目、彩蛋、隐藏题、1元测试）都算进理论极值
+    // 2. actual 是 dimensionScores + eggScores 的总和
+    // 3. min/max 包括了所有来源的理论最大/最小
+    // 4. (actual - min) / (max - min) * 100 映射到 [0, 100]
+    // 5. 未涉及维度 = 0
     normalizeScores() {
       const allQuestions = [...this.questions, ...this.speedQs]
       
-      // 计算每个维度的理论极值（仅题目）
+      // 初始化维度统计
       const dimStats = {}
       for (const dim of DIMENSION_IDS) {
         dimStats[dim] = { 
           min: 0, 
           max: 0, 
           questionCount: 0,
-          actual: this.dimensionScores[dim]
+          actual: this.dimensionScores[dim] + this.eggScores[dim]
         }
       }
       
-      // 遍历所有题目，累加每个维度的理论最大/最小
+      // Step 1: 遍历所有题目，累加每个维度的理论最大/最小
       for (const q of allQuestions) {
         if (!q.dimensions) continue
         for (const [dim, data] of Object.entries(q.dimensions)) {
           if (!dimStats[dim]) continue
           
-          // 提取所有选项分值（排除 weight 字段）
           const optionScores = []
           for (const [key, val] of Object.entries(data)) {
             if (key !== 'weight' && typeof val === 'number') {
@@ -588,27 +586,75 @@ export const useTestStore = defineStore('test', {
         }
       }
       
-      // 归一化
+      // Step 2: 彩蛋/隐藏题的理论范围
+      // 每个彩蛋的可能分数范围：最高加分 = 选择最佳路径，最低扣分 = 选择最差路径
+      const eggRange = {
+        // 邀请函：查看 D3+2.5/D5+1/D8+0.9/D2+0.9/D13-0.9，忽略 D5-1/D8-0.9/D2-0.9/D13+1.5
+        D3: { inc: 0.5 * 5, dec: -0.5 * 5 },
+        D5: { inc: 0.5 * 2, dec: -0.5 * 2 },
+        D8: { inc: 0.3 * 3, dec: -0.3 * 3 },
+        D2: { inc: 0.3 * 3, dec: -0.3 * 3 },
+        D13: { inc: 0.5 * 3, dec: -0.3 * 3 },
+        
+        // 隐藏条款/关闭按钮：D1+3.2/D5+1
+        D1_ht: { inc: 0.8 * 4, dec: 0 },  // 至少+3.2
+        D5_ht: { inc: 0.5 * 2, dec: 0 },
+        
+        // nameEgg/rescueEgg：找到 D1+3.2，没找 D1-2
+        D1_name: { inc: 0.8 * 4, dec: -0.5 * 4 },
+        
+        // adCloseButton：D1+3.2
+        D1_ad: { inc: 0.8 * 4, dec: 0 },
+        
+        // 速答超时：D1-0.2/D3-0.2（最多超时一次）
+        D1_timeout: { inc: 0, dec: -0.2 },
+        D3_timeout: { inc: 0, dec: -0.2 },
+        
+        // keyNavUsed：D1+1
+        D1_key: { inc: 1, dec: 0 },
+        
+        // dimExplorer：D1+1/D5+1
+        D1_de: { inc: 1, dec: 0 },
+        D5_de: { inc: 1, dec: 0 },
+        
+        // 1元测试确认：D3快+4/D3慢-2.5，D14+2
+        D3_yuan: { inc: 0.8 * 5, dec: -0.5 * 5 },
+        D14_yuan_ok: { inc: 0.5 * 4, dec: -0.5 * 4 },
+        D8_yuan: { inc: 0.5 * 4, dec: -0.5 * 4 },
+        D11_yuan: { inc: 0.5 * 3, dec: -0.3 * 2 },
+        
+        // poemEgg：D1+4/D5+2.5/D12+2.5
+        D1_poem: { inc: 0.8 * 5, dec: 0 },
+        D5_poem: { inc: 0.5 * 5, dec: 0 },
+        D12_poem: { inc: 0.5 * 5, dec: 0 },
+      }
+      
+      // 将彩蛋范围合并到各维度
+      const eggMerged = {}  // { dim: { inc: totalInc, dec: totalDec } }
+      for (const [key, range] of Object.entries(eggRange)) {
+        const dim = key.split('_')[0]
+        if (!eggMerged[dim]) eggMerged[dim] = { inc: 0, dec: 0 }
+        eggMerged[dim].inc += range.inc
+        eggMerged[dim].dec += range.dec
+      }
+      
+      for (const [dim, range] of Object.entries(eggMerged)) {
+        if (dimStats[dim]) {
+          dimStats[dim].max += range.inc
+          dimStats[dim].min += range.dec
+        }
+      }
+      
+      // Step 3: 归一化
       for (const dim of DIMENSION_IDS) {
         const stats = dimStats[dim]
         
-        if (stats.questionCount === 0) {
-          // 该维度没有任何题目涉及，给 0 分
+        if (stats.max === stats.min) {
           this.normalizedScores[dim] = 0
         } else {
-          const range = stats.max - stats.min
-          
-          if (range === 0) {
-            // 所有涉及题目该维度分值相同
-            this.normalizedScores[dim] = 0
-          } else {
-            // 题目分数线性映射到 [0, 100]
-            const mapped = ((stats.actual - stats.min) / range) * 100
-            
-            // 加上彩蛋分数，上限 100
-            const final = mapped + this.eggScores[dim]
-            this.normalizedScores[dim] = Math.max(0, Math.min(100, Math.round(final)))
-          }
+          const clamped = Math.max(stats.min, Math.min(stats.max, stats.actual))
+          const normalized = ((clamped - stats.min) / (stats.max - stats.min)) * 100
+          this.normalizedScores[dim] = Math.round(normalized)
         }
       }
     }
