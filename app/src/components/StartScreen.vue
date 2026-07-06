@@ -94,8 +94,8 @@ const showStory = () => {
               你和小猫发现了他的阴谋，你本想带着小猫远走高飞，却最终因为天意卷进了浩大的漩涡之中。
             </p>
             <p class="glass-card p-4 border-l-4 border-green-500 text-white font-medium">
-              你的每一个选择，可能决定着另一个世界无辜生命的命运和生死。<br>
-              请带着200%的认真和共情，打开音量，找一个不被打扰的地方开启下面的测试。              <span class="font-bold gradient-text">人生无法重来，即使手滑选错了也无法回退哦！</span>
+              你的每一个<span class="text-cyan-400 font-bold">选择</span>，可能<span class="text-amber-400 font-bold">决定</span>着另一个世界无辜生命的<span class="text-red-400 font-bold">命运</span>和<span class="text-rose-400 font-bold">生死</span>。<br>
+              请带着<span class="text-purple-400 font-bold">200%</span>的认真和共情，打开<span class="text-cyan-400 font-bold">音量</span>，找一个<span class="text-amber-400 font-bold">不被打扰</span>的地方开启下面的测试。              <span class="font-bold gradient-text">人生无法重来，即使手滑选错了也无法回退哦！</span>
             </p>
           </div>
 
