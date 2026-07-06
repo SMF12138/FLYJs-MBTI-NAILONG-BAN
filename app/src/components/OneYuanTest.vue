@@ -17,13 +17,13 @@ onUnmounted(() => {
 })
 
 const handleConfirm = () => {
-  const isQuick = clickTime.value && (Date.now() - clickTime.value < 5000)
+  const isQuick = clickTime.value && (Date.now() - clickTime.value < 20000)
   store.handle1YuanConfirm(isQuick)
 }
 
 const handleCancel = () => {
   if (prankTimeout) { clearTimeout(prankTimeout); prankTimeout = null }
-  const isQuick = clickTime.value && (Date.now() - clickTime.value < 5000)
+  const isQuick = clickTime.value && (Date.now() - clickTime.value < 20000)
   store.handle1YuanCancel(isQuick)
 }
 
