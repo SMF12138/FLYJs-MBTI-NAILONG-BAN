@@ -555,7 +555,7 @@ const hiddenCount = computed(() => hiddenChallenges.value.filter(c => c.found).l
         <!-- 宿世之敌 -->
         <div class="glass-card p-5 border border-red-500/20 bg-gradient-to-br from-red-500/5 to-purple-500/5">
           <h3 class="text-sm font-bold text-red-400 mb-3 flex items-center gap-2">
-            <span class="text-lg">⚔️</span> 宿世之敌
+            <span class="text-lg">⚔️</span> 夙世之敌
           </h3>
           <div class="flex items-center gap-3">
             <img :src="pairing.nemesis.img" :alt="pairing.nemesis.name"
