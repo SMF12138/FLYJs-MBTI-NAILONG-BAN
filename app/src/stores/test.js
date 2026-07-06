@@ -221,10 +221,9 @@ export const useTestStore = defineStore('test', {
       for (const trigger of eggTriggers) {
         if (trigger.trigger.beforeQuestion) {
           const q = this.questions[this.currentQuestionIndex]
-          console.log('[CHECK BEFORE]', q?.id, '===', trigger.trigger.beforeQuestion, '?', q?.id === trigger.trigger.beforeQuestion)
           if (q && q.id === trigger.trigger.beforeQuestion) {
             const key = `before:${trigger.trigger.beforeQuestion}:${trigger.stage}`
-            if (this._triggeredEggKeys.has(key)) { console.log('[SKIP] already triggered'); continue }
+            if (this._triggeredEggKeys.has(key)) continue
             this._triggeredEggKeys.add(key)
             this._invitationShown = true
             this._enterEggStage(trigger)
