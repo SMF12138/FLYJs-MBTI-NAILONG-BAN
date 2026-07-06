@@ -3,7 +3,6 @@ import { normalQuestions } from '../data/questions'
 import { speedQuestions } from '../data/speedQuestions'
 import { eggTriggers } from '../data/eggTriggers'
 import { DIMENSION_IDS } from '../data/dimensions'
-import { DIMENSION_RANGES } from '../data/dimensionRanges'
 
 // 彩蛋发现记录的 key 列表
 const EGG_KEYS = ['nameEgg', 'rescueEgg', 'adCloseButton', 'poemPuzzle', 'invitationTerms', 'invitationClose', 'hpZero', 'validCard', 'keyNavUsed', 'dimExplorer']
@@ -20,6 +19,9 @@ export const useTestStore = defineStore('test', {
     dimensionScores: Object.fromEntries(DIMENSION_IDS.map(id => [id, 0])),
 
     normalizedScores: {},
+
+    // 彩蛋分数记录（单独存储，用于归一化时计算）
+    eggScores: Object.fromEntries(DIMENSION_IDS.map(id => [id, 0])),
 
     questions: normalQuestions,
     speedQs: speedQuestions,
@@ -153,6 +155,7 @@ export const useTestStore = defineStore('test', {
       this.showHpZeroEffect = false
       this.foundEggs = Object.fromEntries(EGG_KEYS.map(k => [k, false]))
       this.clickedDims = Object.fromEntries(DIMENSION_IDS.map(d => [d, false]))
+      this.eggScores = Object.fromEntries(DIMENSION_IDS.map(id => [id, 0]))
       this._invitationShown = false
       this._pendingHiddenEggStage = null
       this._pendingNextAfterEffect = false
@@ -249,20 +252,20 @@ export const useTestStore = defineStore('test', {
     // ─── 邀请函 ───
     handleInvitationView(isQuick) {
       this.invitationClickTime = Date.now()
-      this.dimensionScores.D3 += isQuick ? 0.5 * 5 : -0.5 * 5
-      this.dimensionScores.D5 += 0.5 * 2
-      this.dimensionScores.D8 += 0.3 * 3
-      this.dimensionScores.D2 += 0.3 * 3
-      this.dimensionScores.D13 += -0.3 * 3
+      this.eggScores.D3 += isQuick ? 0.5 * 5 : 0
+      this.eggScores.D5 += 0.5 * 2
+      this.eggScores.D8 += 0.3 * 3
+      this.eggScores.D2 += 0.3 * 3
+      this.eggScores.D13 += -0.3 * 3
       this.invitationLayer = 2
       this.showInvitationContent = true
     },
 
     handleInvitationIgnore() {
-      this.dimensionScores.D5 += -0.5 * 2
-      this.dimensionScores.D8 += -0.3 * 3
-      this.dimensionScores.D2 += -0.3 * 3
-      this.dimensionScores.D13 += 0.5 * 3
+      this.eggScores.D5 += -0.5 * 2
+      this.eggScores.D8 += -0.3 * 3
+      this.eggScores.D2 += -0.3 * 3
+      this.eggScores.D13 += 0.5 * 3
       this.showInvitation = false
       this.currentStage = 'normal'
     },
@@ -271,8 +274,9 @@ export const useTestStore = defineStore('test', {
       this.foundEggs.invitationTerms = true
       this.showHiddenTerms = true
       this._setTimer('hiddenTerms', () => {
-        this.dimensionScores.D1 += 0.8 * 4
-        this.dimensionScores.D5 += 0.5 * 2
+        this.eggScores.D1 += 0.8 * 4
+        this.eggScores.D5 += 0.5 * 2
+        this.normalizeScores()  // 重新计算
         this.closeInvitation()
       }, 10000)
     },
@@ -281,15 +285,16 @@ export const useTestStore = defineStore('test', {
       this.foundEggs.invitationClose = true
       this.showHiddenTerms = false
       this._clearTimer('hiddenTerms')
-      this.dimensionScores.D1 += 0.8 * 4
-      this.dimensionScores.D5 += 0.5 * 2
+      this.eggScores.D1 += 0.8 * 4
+      this.eggScores.D5 += 0.5 * 2
+      this.normalizeScores()  // 重新计算
       this.closeInvitation()
     },
 
     closeInvitationWithoutClick() {
       this._invitationPath = 'viewNoHidden'
-      this.dimensionScores.D8 += 0.5 * 3
-      this.dimensionScores.D13 += 0.5 * 3
+      this.eggScores.D8 += 0.5 * 3
+      this.eggScores.D13 += 0.5 * 3
       this.closeInvitation()
     },
 
@@ -306,7 +311,7 @@ export const useTestStore = defineStore('test', {
       if (found) this.foundEggs[eggKey] = true
       const scores = found ? foundScores : notFoundScores
       for (const [dim, score] of Object.entries(scores)) {
-        this.dimensionScores[dim] += score
+        this.eggScores[dim] += score
       }
       this.currentStage = 'normal'
       this._pendingHiddenEggStage = null
@@ -336,7 +341,8 @@ export const useTestStore = defineStore('test', {
 
     handleAdCloseButton() {
       this.foundEggs.adCloseButton = true
-      this.dimensionScores.D1 += 0.8 * 4
+      this.eggScores.D1 += 0.8 * 4
+      this.normalizeScores()  // 重新计算
       this._clearAllTimers()
       this.showAd = false
       this.currentStage = 'normal'
@@ -354,7 +360,7 @@ export const useTestStore = defineStore('test', {
     handleKeyNav() {
       if (!this.foundEggs.keyNavUsed) {
         this.foundEggs.keyNavUsed = true
-        this.dimensionScores.D1 += 1
+        this.eggScores.D1 += 1
       }
     },
 
@@ -364,9 +370,9 @@ export const useTestStore = defineStore('test', {
       const count = Object.values(this.clickedDims).filter(v => v).length
       if (count === 15 && !this.foundEggs.dimExplorer) {
         this.foundEggs.dimExplorer = true
-        this.dimensionScores.D1 += 1
-        this.dimensionScores.D5 += 1
-        this.normalizeScores()
+        this.eggScores.D1 += 1
+        this.eggScores.D5 += 1
+        this.normalizeScores()  // 重新计算
       }
     },
 
@@ -442,8 +448,8 @@ export const useTestStore = defineStore('test', {
     handleSpeedTimeout(questionId) {
       const question = this.speedQs.find(q => q.id === questionId)
       if (!question) return
-      this.dimensionScores.D1 -= 0.2
-      this.dimensionScores.D3 -= 0.2
+      this.eggScores.D1 -= 0.2
+      this.eggScores.D3 -= 0.2
       this.answerSpeedQuestion(questionId, question.defaultAnswer)
     },
 
@@ -501,28 +507,28 @@ export const useTestStore = defineStore('test', {
 
     // ─── 1元测试 ───
     handle1YuanConfirm(isQuick) {
-      this.dimensionScores.D3 += isQuick ? 0.8 * 5 : -0.5 * 5
-      this.dimensionScores.D14 += 0.5 * 4
+      this.eggScores.D3 += isQuick ? 0.8 * 5 : 0
+      this.eggScores.D14 += 0.5 * 4
       this.yuanTestStage = 'input'
     },
 
     handle1YuanCancel(isQuick) {
-      this.dimensionScores.D3 += isQuick ? 0.8 * 5 : -0.5 * 5
-      this.dimensionScores.D14 += -0.5 * 4
-      this.dimensionScores.D8 += -0.5 * 4
+      this.eggScores.D3 += isQuick ? 0.8 * 5 : 0
+      this.eggScores.D14 += -0.5 * 4
+      this.eggScores.D8 += -0.5 * 4
       this.finish1YuanTest()
     },
 
     handle1YuanInput(hasInput) {
       if (hasInput) {
         this.foundEggs.validCard = true
-        this.dimensionScores.D8 += 0.5 * 4
-        this.dimensionScores.D14 += 0.8 * 4
-        this.dimensionScores.D11 += 0.5 * 3
+        this.eggScores.D8 += 0.5 * 4
+        this.eggScores.D14 += 0.8 * 4
+        this.eggScores.D11 += 0.5 * 3
       } else {
-        this.dimensionScores.D8 += 0.5 * 4
-        this.dimensionScores.D14 += -0.3 * 4
-        this.dimensionScores.D11 += -0.3 * 2
+        this.eggScores.D8 += 0.5 * 4
+        this.eggScores.D14 += -0.3 * 4
+        this.eggScores.D11 += -0.3 * 2
       }
       this.finish1YuanTest()
     },
@@ -533,33 +539,76 @@ export const useTestStore = defineStore('test', {
       this.normalizeScores()
     },
 
-    // ─── 分数归一化（均分锚点法：15维度均分=50%，按min/max比例映射）───
+    // ─── 分数归一化（基于每个维度独立计算理论最大/最小，按实际得分比例映射）───
+    // 核心原则：
+    // 1. 每个维度独立计算，只考虑涉及该维度的题目
+    // 2. 理论最大值 = 所有涉及题都选该维度最高分
+    // 3. 理论最小值 = 所有涉及题都选该维度最低分
+    // 4. 题目分数映射到 [0, 100]，彩蛋分数作为额外加分
+    // 5. 最终分数 = 映射分 + 彩蛋分，上限 100
+    // 6. 未涉及维度 = 0（不是 50）
     normalizeScores() {
-      const rawValues = DIMENSION_IDS.map(dim => this.dimensionScores[dim])
-      const mean = rawValues.reduce((a, b) => a + b, 0) / rawValues.length
-      const mid = (a, b) => (a + b) / 2  // min和max的中点
-
-      for (const [dim, range] of Object.entries(DIMENSION_RANGES)) {
-        const raw = this.dimensionScores[dim]
-        let normalized
-        if (raw >= mean) {
-          const span = range.max - mean
-          if (span > 0) {
-            normalized = 50 + ((raw - mean) / span) * 50
-          } else {
-            // 均分已达max，用中点参考
-            normalized = 50 + ((raw - mid(range.min, range.max)) / (range.max - mid(range.min, range.max))) * 50
+      const allQuestions = [...this.questions, ...this.speedQs]
+      
+      // 计算每个维度的理论极值（仅题目）
+      const dimStats = {}
+      for (const dim of DIMENSION_IDS) {
+        dimStats[dim] = { 
+          min: 0, 
+          max: 0, 
+          questionCount: 0,
+          actual: this.dimensionScores[dim]
+        }
+      }
+      
+      // 遍历所有题目，累加每个维度的理论最大/最小
+      for (const q of allQuestions) {
+        if (!q.dimensions) continue
+        for (const [dim, data] of Object.entries(q.dimensions)) {
+          if (!dimStats[dim]) continue
+          
+          // 提取所有选项分值（排除 weight 字段）
+          const optionScores = []
+          for (const [key, val] of Object.entries(data)) {
+            if (key !== 'weight' && typeof val === 'number') {
+              optionScores.push(val)
+            }
           }
+          
+          if (optionScores.length === 0) continue
+          
+          const weight = data.weight || 1
+          const maxScore = Math.max(...optionScores) * weight
+          const minScore = Math.min(...optionScores) * weight
+          
+          dimStats[dim].max += maxScore
+          dimStats[dim].min += minScore
+          dimStats[dim].questionCount++
+        }
+      }
+      
+      // 归一化
+      for (const dim of DIMENSION_IDS) {
+        const stats = dimStats[dim]
+        
+        if (stats.questionCount === 0) {
+          // 该维度没有任何题目涉及，给 0 分
+          this.normalizedScores[dim] = 0
         } else {
-          const span = mean - range.min
-          if (span > 0) {
-            normalized = ((raw - range.min) / span) * 50
+          const range = stats.max - stats.min
+          
+          if (range === 0) {
+            // 所有涉及题目该维度分值相同
+            this.normalizedScores[dim] = 0
           } else {
-            // 均分已达min，用中点参考
-            normalized = ((raw - range.min) / (mid(range.min, range.max) - range.min)) * 50
+            // 题目分数线性映射到 [0, 100]
+            const mapped = ((stats.actual - stats.min) / range) * 100
+            
+            // 加上彩蛋分数，上限 100
+            const final = mapped + this.eggScores[dim]
+            this.normalizedScores[dim] = Math.max(0, Math.min(100, Math.round(final)))
           }
         }
-        this.normalizedScores[dim] = Math.max(0, Math.min(100, Math.round(normalized)))
       }
     }
   }

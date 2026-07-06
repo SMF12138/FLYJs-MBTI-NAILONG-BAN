@@ -6,7 +6,7 @@ const store = useTestStore()
 const clickTime = ref(Date.now())
 
 const handleView = () => {
-  const isQuick = Date.now() - clickTime.value < 2000
+  const isQuick = Date.now() - clickTime.value < 5000
   store.handleInvitationView(isQuick)
 }
 
