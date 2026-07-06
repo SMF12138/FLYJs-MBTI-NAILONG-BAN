@@ -208,6 +208,7 @@ const handleKeydown = (e) => {
         <div v-else-if="store.currentStage === 'speed'" class="flex-1 flex items-start justify-center py-6 sm:py-8">
           <SpeedQuestion
             v-if="store.currentSpeedQuestion"
+            :key="store.currentSpeedQuestion.id"
             :question="store.currentSpeedQuestion"
             @answer="handleSpeedAnswer"
           />
