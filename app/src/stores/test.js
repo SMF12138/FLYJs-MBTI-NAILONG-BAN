@@ -535,21 +535,29 @@ export const useTestStore = defineStore('test', {
 
     // ─── 分数归一化（均分锚点法：15维度均分=50%，按min/max比例映射）───
     normalizeScores() {
-      // 1. 计算15维度原始分的均值
       const rawValues = DIMENSION_IDS.map(dim => this.dimensionScores[dim])
       const mean = rawValues.reduce((a, b) => a + b, 0) / rawValues.length
+      const mid = (a, b) => (a + b) / 2  // min和max的中点
 
       for (const [dim, range] of Object.entries(DIMENSION_RANGES)) {
         const raw = this.dimensionScores[dim]
         let normalized
         if (raw >= mean) {
-          // 高于均分：50% → 100%，按 (mean, max) 比例
           const span = range.max - mean
-          normalized = span > 0 ? 50 + ((raw - mean) / span) * 50 : 50
+          if (span > 0) {
+            normalized = 50 + ((raw - mean) / span) * 50
+          } else {
+            // 均分已达max，用中点参考
+            normalized = 50 + ((raw - mid(range.min, range.max)) / (range.max - mid(range.min, range.max))) * 50
+          }
         } else {
-          // 低于均分：0% → 50%，按 (min, mean) 比例
           const span = mean - range.min
-          normalized = span > 0 ? ((raw - range.min) / span) * 50 : 50
+          if (span > 0) {
+            normalized = ((raw - range.min) / span) * 50
+          } else {
+            // 均分已达min，用中点参考
+            normalized = ((raw - range.min) / (mid(range.min, range.max) - range.min)) * 50
+          }
         }
         this.normalizedScores[dim] = Math.max(0, Math.min(100, Math.round(normalized)))
       }

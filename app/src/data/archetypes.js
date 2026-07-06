@@ -1,4 +1,5 @@
 // ─── 天作之合 & 宿世之敌（32基础角色各一对） ───
+
 const PAIRINGS = {
   '天命织者':   { soulmate: '末日歌者',     nemesis: '天命收割者' },
   '末日歌者':   { soulmate: '天命织者',     nemesis: '暗潮煽动者' },
@@ -484,6 +485,12 @@ export function getCharacterByName(name) {
   for (const villain of Object.values(VILLAIN_MAP)) {
     if (villain.name === name) return villain
   }
+  for (const high of Object.values(SPECIAL_HIGH)) {
+    if (high.name === name) return high
+  }
+  for (const low of Object.values(SPECIAL_LOW)) {
+    if (low.name === name) return low
+  }
   return null
 }
 
@@ -494,8 +501,8 @@ export function getPairing(characterName) {
   const nemesis = getCharacterByName(pairing.nemesis)
   if (!soulmate || !nemesis) return null
   return {
-    soulmate: { name: soulmate.name, img: soulmate.img, verse: soulmate.verse },
-    nemesis: { name: nemesis.name, img: nemesis.img, verse: nemesis.verse },
+    soulmate: { name: soulmate.name, prefix: soulmate.prefix, img: soulmate.img, verse: soulmate.verse },
+    nemesis: { name: nemesis.name, prefix: nemesis.prefix, img: nemesis.img, verse: nemesis.verse },
   }
 }
 
@@ -1062,6 +1069,7 @@ export function getAllCharacters() {
     result.push({
       id: 'hero-' + key,
       name: base.name,
+      prefix: base.prefix,
       img: base.img,
       verse: base.verse,
       desc: base.desc,
@@ -1073,6 +1081,7 @@ export function getAllCharacters() {
       result.push({
         id: 'villain-' + key,
         name: villain.name,
+        prefix: villain.prefix,
         img: villain.img,
         verse: villain.verse,
         desc: villain.desc,
@@ -1094,6 +1103,7 @@ export function getAllCharacters() {
     result.push({
       id: 'special-' + i,
       name: char.name,
+      prefix: char.prefix,
       img: char.img,
       verse: char.verse,
       desc: char.desc,
