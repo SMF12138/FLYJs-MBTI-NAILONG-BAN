@@ -4,10 +4,10 @@ const path = require('path');
 const filePath = path.join(__dirname, 'src/data/archetypes.js');
 let content = fs.readFileSync(filePath, 'utf-8');
 
-// 先删除所有旧的 prefix 行
-content = content.replace(/\n\s+prefix: '[^']+',/g, '');
+// 删除所有现有的 prefix 字段
+content = content.replace(/, prefix: '[^']*'/g, '');
 
-// 用户指定的完整前缀映射（严格按用户输入）
+// 用户指定的完整前缀映射
 const prefixMap = {
   // 正派16人
   '天命织者': 'FATE', '末日歌者': 'LAST-SONG', '暗夜守护者': 'TANK-MODE',
@@ -36,9 +36,12 @@ const prefixMap = {
   '执念者': 'TRY-HARD', '无欲者': 'BUDDHA-MODE', '尸体': 'SKILL-ISSUE',
 };
 
-// 逐个插入 prefix
 for (const [name, prefix] of Object.entries(prefixMap)) {
-  const regex = new RegExp(`(name: '${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}', emoji: '[^']*', )(verse:)`);
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // 匹配: name: 'xxx', emoji: '...', 然后在 verse: 前插入 prefix
+  // 基础角色格式: name: 'xxx', emoji: '...', img: '...', verse: '...'
+  // 特殊角色格式: name: 'xxx', emoji: '...', verse: '...'
+  const regex = new RegExp(`(name: '${escapedName}', emoji: '[^']*', )(?:img: '[^']*', )?(verse:)`);
   content = content.replace(regex, `$1prefix: '${prefix}', $2`);
 }
 
