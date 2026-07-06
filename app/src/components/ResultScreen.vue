@@ -2,10 +2,17 @@
 import { computed, ref, onUnmounted } from 'vue'
 import { useTestStore } from '../stores/test'
 import { DIMENSIONS, DIMENSION_IDS } from '../data/dimensions'
-import { classifyArchetype, getArchetypeDisplay, getAllCharacters, getPairing } from '../data/archetypes'
+import { classifyArchetype, getArchetypeDisplay, getAllCharacters, getPairing, getCharacterByName } from '../data/archetypes'
 import RadarChart from './RadarChart.vue'
 
 const store = useTestStore()
+
+// 辅助函数：拼接英文前缀 + 中文名
+const formatName = (name) => {
+  const char = getCharacterByName(name)
+  if (!char || !char.prefix) return name
+  return `${char.prefix} ${name}`
+}
 
 // 结果页加载时给分数拍快照，避免后续成就加分改变已展示的角色和匹配
 const snapshotScores = { ...store.normalizedScores }
@@ -314,7 +321,7 @@ const hiddenCount = computed(() => hiddenChallenges.value.filter(c => c.found).l
             <img :src="archetypeResult.heroImg" :alt="archetypeResult.heroName"
               @error="$event.target.style.display='none'"
               class="w-32 h-32 rounded-full mx-auto mb-3 object-cover border-2 border-yellow-500/30 group-hover:scale-105 transition-transform" />
-            <h3 class="text-lg font-bold text-yellow-400 mb-1">{{ archetypeResult.heroName }}</h3>
+            <h3 class="text-lg font-bold text-yellow-400 mb-1">{{ formatName(archetypeResult.heroName) }}</h3>
             <p class="text-sm text-gray-500">选择光明之路</p>
           </button>
           <button
@@ -324,7 +331,7 @@ const hiddenCount = computed(() => hiddenChallenges.value.filter(c => c.found).l
             <img :src="archetypeResult.villainImg" :alt="archetypeResult.villainName"
               @error="$event.target.style.display='none'"
               class="w-32 h-32 rounded-full mx-auto mb-3 object-cover border-2 border-red-500/30 group-hover:scale-105 transition-transform" />
-            <h3 class="text-lg font-bold text-red-400 mb-1">{{ archetypeResult.villainName }}</h3>
+            <h3 class="text-lg font-bold text-red-400 mb-1">{{ formatName(archetypeResult.villainName) }}</h3>
             <p class="text-sm text-gray-500">选择暗影之路</p>
           </button>
         </div>
@@ -340,7 +347,7 @@ const hiddenCount = computed(() => hiddenChallenges.value.filter(c => c.found).l
           <img :src="finalArchetype.img" :alt="finalArchetype.name"
             class="w-48 h-48 rounded-full mx-auto mb-4 object-cover border-4 animate-float"
             :class="finalArchetype.alignment === 'hero' ? 'border-yellow-500/50' : 'border-red-500/50'" />
-          <h3 class="text-3xl font-bold gradient-text mb-1">{{ finalArchetype.name }}</h3>
+          <h3 class="text-3xl font-bold gradient-text mb-1">{{ formatName(finalArchetype.name) }}</h3>
 
           <div class="inline-flex items-center gap-3 mb-4">
             <span :class="finalArchetype.alignment === 'hero' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' : finalArchetype.alignment === 'villain' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-gray-500/20 text-gray-400 border-gray-500/30'"
@@ -374,7 +381,7 @@ const hiddenCount = computed(() => hiddenChallenges.value.filter(c => c.found).l
                       <span class="text-xl">{{ trait.emoji }}</span>
                       <p class="text-lg font-bold"
                         :class="trait.type === 'high' ? 'text-amber-400' : 'text-blue-400'"
-                      >{{ trait.name }}</p>
+                      >{{ formatName(trait.name) }}</p>
                       <span class="text-xs px-2 py-0.5 rounded-full border"
                         :class="trait.type === 'high' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-blue-500/20 text-blue-400 border-blue-500/30'"
                       >{{ trait.type === 'high' ? '高分特殊' : '低分特殊' }}</span>
@@ -468,7 +475,7 @@ const hiddenCount = computed(() => hiddenChallenges.value.filter(c => c.found).l
               <img :src="char.img" :alt="char.name"
                 class="w-12 h-12 rounded-full object-cover flex-shrink-0 border border-gray-600" />
               <div class="flex-1 min-w-0">
-                <p class="font-semibold text-white text-base truncate">{{ char.name }}</p>
+                <p class="font-semibold text-white text-base truncate">{{ formatName(char.name) }}</p>
                 <p class="text-sm text-gray-400 truncate">{{ char.verse }}</p>
               </div>
               <span class="text-cyan-400 font-semibold text-base flex-shrink-0 neon-text-cyan">{{ char.similarity }}%</span>
@@ -509,7 +516,7 @@ const hiddenCount = computed(() => hiddenChallenges.value.filter(c => c.found).l
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-1">
                   <span class="text-xl">{{ char.emoji }}</span>
-                  <p class="text-base font-bold text-white truncate">{{ char.name }}</p>
+                  <p class="text-base font-bold text-white truncate">{{ formatName(char.name) }}</p>
                   <span class="text-xs px-2 py-0.5 rounded-full border"
                     :class="char.type === 'high' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-blue-500/20 text-blue-400 border-blue-500/30'"
                   >{{ char.type === 'high' ? '高分特殊' : '低分特殊' }}</span>
@@ -546,7 +553,7 @@ const hiddenCount = computed(() => hiddenChallenges.value.filter(c => c.found).l
               class="w-14 h-14 rounded-full object-cover border-2 border-pink-500/30"
               @error="$event.target.style.display='none'" />
             <div class="flex-1 min-w-0">
-              <p class="text-white font-bold text-base truncate">{{ pairing.soulmate.name }}</p>
+              <p class="text-white font-bold text-base truncate">{{ formatName(pairing.soulmate.name) }}</p>
               <p class="text-gray-400 text-sm truncate mt-1">{{ pairing.soulmate.verse }}</p>
             </div>
           </div>
@@ -562,7 +569,7 @@ const hiddenCount = computed(() => hiddenChallenges.value.filter(c => c.found).l
               class="w-14 h-14 rounded-full object-cover border-2 border-red-500/30"
               @error="$event.target.style.display='none'" />
             <div class="flex-1 min-w-0">
-              <p class="text-white font-bold text-base truncate">{{ pairing.nemesis.name }}</p>
+              <p class="text-white font-bold text-base truncate">{{ formatName(pairing.nemesis.name) }}</p>
               <p class="text-gray-400 text-sm truncate mt-1">{{ pairing.nemesis.verse }}</p>
             </div>
           </div>

@@ -477,7 +477,7 @@ const VILLAIN_MAP = {
 
 // ─── 天作之合 & 宿世之敌（32基础角色各一对） ───
 
-function getCharacterByName(name) {
+export function getCharacterByName(name) {
   for (const base of Object.values(BASE)) {
     if (base.name === name) return base
   }
