@@ -95,7 +95,8 @@ const showStory = () => {
             </p>
             <p class="glass-card p-4 border-l-4 border-green-500 text-white font-medium">
               你的每一个选择，可能决定着另一个世界无辜生命的命运和生死。<br>
-              请带着200%的认真和共情，开启下面的测试。建议打开音量，找一个不被打扰的地方开启下面的测试。              <span class="font-bold gradient-text">人生无法重来，即使手滑选错了也无法回退哦！</span>
+              你的每一个选择，可能决定着另一个世界无辜生命的命运和生死。<br>
+              请带着200%的认真和共情，打开音量，找一个不被打扰的地方开启下面的测试。              <span class="font-bold gradient-text">人生无法重来，即使手滑选错了也无法回退哦！</span>
             </p>
           </div>
 
