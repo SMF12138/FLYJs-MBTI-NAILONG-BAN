@@ -1036,7 +1036,7 @@ export function classifyArchetype(scores) {
 }
 
 export function getArchetypeDisplay(baseKey, alignment) {
-  const base = BASE[baseKey] || { verse: '', img: '/avatars/09_奶龙.jpg', name: baseKey || '未知', desc: '' }
+  const base = BASE[baseKey] || { verse: '', img: '', name: baseKey || '未知', desc: '' }
   const villain = VILLAIN_MAP[base.name]
   if (alignment === 'villain' && villain) {
     return { verse: villain.verse, img: villain.img, name: villain.name, desc: villain.desc }
