@@ -1,6 +1,5 @@
 // 模拟一次完整游戏的得分，验证归一化是否合理
 const { classifyArchetype, getPairing, getAllCharacters } = require('./src/data/archetypes.js');
-const { DIMENSION_RANGES } = require('./src/data/dimensionRanges.js');
 
 // 模拟正常答题得分（假设用户答了所有正常题，选择了中等偏高的选项）
 const rawScores = {
@@ -15,9 +14,17 @@ for (const [dim, raw] of Object.entries(rawScores)) {
   console.log(`  ${dim}: ${raw}`);
 }
 
-console.log('\n2. 归一化后分数:');
+console.log('\n2. 归一化后分数（使用模拟范围）:');
 const normalized = {};
-for (const [dim, range] of Object.entries(DIMENSION_RANGES)) {
+// 模拟动态范围（与实际归一化逻辑一致）
+const simulatedRanges = {
+  D1: { min: -7.5, max: 25 }, D2: { min: -5.9, max: 20 }, D3: { min: -3.7, max: 16 },
+  D4: { min: -14.8, max: 50 }, D5: { min: -2.2, max: 30 }, D6: { min: -15.9, max: 35 },
+  D7: { min: -20.0, max: 60 }, D8: { min: -16.4, max: 40 }, D9: { min: -17.5, max: 30 },
+  D10: { min: -15.2, max: 35 }, D11: { min: -18.8, max: 55 }, D12: { min: -17.5, max: 40 },
+  D13: { min: -11.3, max: 45 }, D14: { min: -17.2, max: 25 }, D15: { min: -17.0, max: 45 }
+};
+for (const [dim, range] of Object.entries(simulatedRanges)) {
   const raw = rawScores[dim] || 0;
   const norm = ((raw - range.min) / (range.max - range.min)) * 100;
   normalized[dim] = Math.round(Math.max(0, Math.min(100, norm)));

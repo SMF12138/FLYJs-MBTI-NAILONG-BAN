@@ -20,3 +20,7 @@ npm run preview  # 预览生产构建
 
 - Node.js >= 18
 - npm >= 9
+
+## 版权
+
+© 2026 FLYJs. 仅供学习交流，禁止商业使用。
