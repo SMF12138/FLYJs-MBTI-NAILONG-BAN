@@ -2,7 +2,7 @@
 export const DIMENSION_RANGES = {
   D1: { min: -7.5, max: 8.0 },
   D2: { min: -5.9, max: 10.0 },
-  D3: { min: -3.7, max: 12.0 },
+  D3: { min: -3.7, max: 16.0 },
   D4: { min: -14.8, max: 37.0 },
   D5: { min: -2.2, max: 13.0 },
   D6: { min: -15.9, max: 19.0 },
