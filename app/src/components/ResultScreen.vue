@@ -216,8 +216,8 @@ const pairing = computed(() => {
   if (!displayName) return null
   const p = getPairing(displayName) || getPairing(heroName)
   if (!p || !p.soulmate || !p.nemesis) return null
-  // 排除用户自己的正派名和反派名
-  const ownNames = new Set([heroName, villainName].filter(Boolean))
+  // 排除用户当前显示的角色（避免自己配对自己）
+  const ownNames = new Set([displayName].filter(Boolean))
   if (ownNames.has(p.soulmate.name) || ownNames.has(p.nemesis.name)) return null
   return p
 })
