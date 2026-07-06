@@ -14,8 +14,8 @@ const PAIRINGS = {
   '低语者':     { soulmate: '黑幕',         nemesis: '蛊惑者' },
   '花栗鼠大人': { soulmate: '屠龙者',       nemesis: '鼠王' },
   '暮日祈祷者': { soulmate: '鼠王',         nemesis: '暮日审判者' },
-  '痴儿':       { soulmate: '梦逝者',       nemesis: '狂者' },
-  '孤者':       { soulmate: '死神',         nemesis: '死神' },
+  '痴儿':       { soulmate: '梦逝者',       nemesis: '死神' },
+  '孤者':       { soulmate: '死神',         nemesis: '狂者' },
   '天命收割者': { soulmate: '暗夜猎杀者',   nemesis: '天命织者' },
   '暗潮煽动者': { soulmate: '蛊惑者',       nemesis: '末日歌者' },
   '暗夜猎杀者': { soulmate: '天命收割者',   nemesis: '暗夜守护者' },
@@ -30,8 +30,8 @@ const PAIRINGS = {
   '蛊惑者':     { soulmate: '暗潮煽动者',   nemesis: '低语者' },
   '鼠王':       { soulmate: '暮日祈祷者',   nemesis: '花栗鼠大人' },
   '暮日审判者': { soulmate: '灭世者',       nemesis: '暮日祈祷者' },
-  '狂者':       { soulmate: '视奸者',       nemesis: '痴儿' },
-  '死神':       { soulmate: '孤者',         nemesis: '孤者' },
+  '狂者':       { soulmate: '视奸者',       nemesis: '孤者' },
+  '死神':       { soulmate: '孤者',         nemesis: '痴儿' },
 }
 // 总计62种画像
 //
