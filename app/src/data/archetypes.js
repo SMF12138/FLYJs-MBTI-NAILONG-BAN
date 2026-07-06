@@ -1,3 +1,5 @@
+import PAIRINGS from './pairings.js'
+
 // 32角色体系 = 16人格原型 × 正邪两面 + 30特殊人格标签
 // 总计62种画像
 //
@@ -442,7 +444,6 @@ const VILLAIN_MAP = {
 }
 
 // ─── 天作之合 & 宿世之敌（32基础角色各一对） ───
-import PAIRINGS from './pairings.js'
 
 function getCharacterByName(name) {
   for (const base of Object.values(BASE)) {
