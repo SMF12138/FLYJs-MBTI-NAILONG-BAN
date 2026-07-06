@@ -6,8 +6,8 @@ const store = useTestStore()
 const clickTime = ref(Date.now())
 
 const handleView = () => {
-  const isQuick = Date.now() - clickTime.value < 20000
-  store.handleInvitationView(isQuick)
+  const elapsed = Date.now() - clickTime.value
+  store.handleInvitationView(elapsed)
 }
 
 const handleIgnore = () => {

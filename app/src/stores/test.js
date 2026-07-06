@@ -250,9 +250,10 @@ export const useTestStore = defineStore('test', {
     },
 
     // ─── 邀请函 ───
-    handleInvitationView(isQuick) {
+    handleInvitationView(elapsed) {
       this.invitationClickTime = Date.now()
-      this.eggScores.D3 += isQuick ? 0.5 * 5 : -0.5 * 5
+      // <5秒加分, 5-20秒不变, >20秒扣分
+      this.eggScores.D3 += elapsed < 5000 ? 0.5 * 5 : elapsed > 20000 ? -0.5 * 5 : 0
       this.eggScores.D5 += 0.5 * 2
       this.eggScores.D8 += 0.3 * 3
       this.eggScores.D2 += 0.3 * 3
@@ -506,14 +507,14 @@ export const useTestStore = defineStore('test', {
     },
 
     // ─── 1元测试 ───
-    handle1YuanConfirm(isQuick) {
-      this.eggScores.D3 += isQuick ? 0.8 * 5 : -0.5 * 5
+    handle1YuanConfirm(elapsed) {
+      this.eggScores.D3 += elapsed < 5000 ? 0.8 * 5 : elapsed > 20000 ? -0.5 * 5 : 0
       this.eggScores.D14 += 0.5 * 4
       this.yuanTestStage = 'input'
     },
 
-    handle1YuanCancel(isQuick) {
-      this.eggScores.D3 += isQuick ? 0.8 * 5 : -0.5 * 5
+    handle1YuanCancel(elapsed) {
+      this.eggScores.D3 += elapsed < 5000 ? 0.8 * 5 : elapsed > 20000 ? -0.5 * 5 : 0
       this.eggScores.D14 += -0.5 * 4
       this.eggScores.D8 += -0.5 * 4
       this.finish1YuanTest()
