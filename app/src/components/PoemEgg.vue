@@ -127,6 +127,8 @@ const wrongFlash = ref(null)
 const touchDrag = ref(null)
 const touchGhost = ref(null)
 
+const isTouchDevice = ref('ontouchstart' in window)
+
 const getPointer = (e) => {
   if (!e) return { x: 0, y: 0 }
   const t = e.touches ? e.touches[0] : e
@@ -137,12 +139,22 @@ const getPointer = (e) => {
 const getSlotAtPoint = (x, y) => {
   const el = document.elementFromPoint(x, y)
   if (!el) return null
-  const slot = el.closest('[data-slot-idx]')
-  if (slot) {
-    return { type: 'slot', lineIdx: parseInt(slot.dataset.lineIdx), slotIdx: parseInt(slot.dataset.slotIdx) }
+  
+  // 向上查找槽位元素
+  let current = el
+  while (current && current !== document.body) {
+    if (current.dataset && current.dataset.slotIdx !== undefined) {
+      return { 
+        type: 'slot', 
+        lineIdx: parseInt(current.dataset.lineIdx), 
+        slotIdx: parseInt(current.dataset.slotIdx) 
+      }
+    }
+    if (current.dataset && current.dataset.pool !== undefined) {
+      return { type: 'pool' }
+    }
+    current = current.parentElement
   }
-  const poolEl = el.closest('[data-pool]')
-  if (poolEl) return { type: 'pool' }
   return null
 }
 
@@ -171,12 +183,6 @@ const onPointerMove = (e) => {
   const p = getPointer(e)
   touchDrag.value.x = p.x
   touchDrag.value.y = p.y
-  // 实时高亮手指下的槽位
-  const hit = getSlotAtPoint(p.x, p.y)
-  if (hit && hit.type === 'slot') {
-    const slot = grid.value[hit.lineIdx][hit.slotIdx]
-    if (slot) slot._hover = true
-  }
 }
 
 const onPointerEnd = (e) => {
@@ -187,10 +193,15 @@ const onPointerEnd = (e) => {
   
   if (hit && hit.type === 'slot') {
     onDropToSlot({}, hit.lineIdx, hit.slotIdx)
+  } else if (hit && hit.type === 'pool') {
+    onDropToPool({})
   } else {
+    // 如果没有命中任何目标，尝试最近的槽位
     onDropToPool({})
   }
   touchDrag.value = null
+  dragChar.value = null
+  dragFrom.value = null
 }
 
 const onPointerUpPool = (e) => {
@@ -198,6 +209,8 @@ const onPointerUpPool = (e) => {
   if (e && e.preventDefault) e.preventDefault()
   onDropToPool({})
   touchDrag.value = null
+  dragChar.value = null
+  dragFrom.value = null
 }
 
 
@@ -454,6 +467,7 @@ const handleSkip = () => {
         <div class="space-y-2 mb-8">
           <div v-for="(line, lineIdx) in grid" :key="lineIdx" class="flex justify-center gap-2">
             <div v-for="(slot, slotIdx) in line" :key="`${lineIdx}-${slotIdx}`"
+              :data-slot-idx="slotIdx" :data-line-idx="lineIdx"
               @dragover="onDragOver" @drop="onDropToSlot($event, lineIdx, slotIdx)"
               @touchstart="onPointerDownSlot($event, lineIdx, slotIdx)"
               class="w-12 h-12 rounded-xl flex items-center justify-center font-bold border-2 border-dashed transition-all duration-200 select-none text-xl touch-none"
@@ -463,7 +477,7 @@ const handleSkip = () => {
                 boxShadow: `0 0 16px 6px ${COLORS[slotIdx].border}`, transform: 'scale(1.2)', color: COLORS[slotIdx].text
               } : { color: slot.correctLine === lineIdx && slot.correctSlot === slotIdx ? COLORS[slot.correctSlot].text : '#6b7280' }"
             >
-              <span v-if="slot.char" draggable="true" @dragstart="onDragStartSlot($event, lineIdx, slotIdx)" @dragend="onDragEnd"
+              <span v-if="slot.char" :draggable="!isTouchDevice" @dragstart="onDragStartSlot($event, lineIdx, slotIdx)" @dragend="onDragEnd"
                 class="w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing rounded-xl transition-all duration-300">{{ slot.char }}</span>
               <span v-else class="text-gray-700">·</span>
             </div>
@@ -471,8 +485,9 @@ const handleSkip = () => {
         </div>
 
         <div @dragover="onDragOver" @drop="onDropToPool" @touchend="onPointerUpPool"
+          data-pool="true"
           class="flex flex-wrap justify-center gap-2 mb-8 p-4 glass-card min-h-[56px] border-2 border-dashed border-gray-700">
-          <div v-for="(item, idx) in pool" :key="item.id" draggable="true"
+          <div v-for="(item, idx) in pool" :key="item.id" :draggable="!isTouchDevice"
             @dragstart="onDragStartPool($event, idx)" @dragend="onDragEnd"
             @touchstart="onPointerDownPool($event, idx)" @touchend="onPointerEnd"
             class="w-12 h-12 rounded-xl flex items-center justify-center font-bold cursor-grab active:cursor-grabbing transition-all duration-200 select-none border-2 text-xl touch-none"
