@@ -71,8 +71,6 @@ const startTypewriter = () => {
 
 onMounted(() => {
   startTypewriter()
-  document.addEventListener('touchmove', onPointerMove, { passive: false })
-  document.addEventListener('touchend', onPointerEnd)
 })
 
 const correctAnswer = poem.join('')
@@ -85,6 +83,9 @@ watch(() => store.currentStage, (newStage) => {
     readAudio.pause()
     readAudio.currentTime = 0
     if (typeTimer) { clearInterval(typeTimer); typeTimer = null }
+    // 退出时移除事件
+    document.removeEventListener('touchmove', onPointerMove)
+    document.removeEventListener('touchend', onPointerEnd)
   }
 })
 
@@ -107,6 +108,11 @@ const enterPuzzle = () => {
   showIntro.value = false
   readAudio.currentTime = 0
   readAudio.play().catch(() => {})
+  // 进入拼诗界面时添加触屏事件
+  if (isTouchDevice.value) {
+    document.addEventListener('touchmove', onPointerMove, { passive: false })
+    document.addEventListener('touchend', onPointerEnd)
+  }
 }
 
 // ── 拼诗逻辑 ──
@@ -162,43 +168,60 @@ const onPointerDownSlot = (e, lineIdx, slotIdx) => {
   if (!(e.touches && e.touches.length > 0) && e.pointerType !== 'touch') return
   const slot = grid.value[lineIdx][slotIdx]
   if (!slot.char) return
-  e.preventDefault()
+  // 不在touchstart时阻止默认行为，让touchmove时再阻止
   dragChar.value = { char: slot.char, correctLine: slot.correctLine, correctSlot: slot.correctSlot }
   dragFrom.value = { type: 'slot', lineIdx, slotIdx }
   const p = getPointer(e)
-  touchDrag.value = { x: p.x, y: p.y }
+  touchDrag.value = { x: p.x, y: p.y, startX: p.x, startY: p.y, moved: false }
 }
 
 const onPointerDownPool = (e, idx) => {
-  e.preventDefault()
+  // 不在touchstart时阻止默认行为
   dragChar.value = { char: pool.value[idx].char, correctLine: pool.value[idx].correctLine, correctSlot: pool.value[idx].correctSlot }
   dragFrom.value = { type: 'pool', idx }
   const p = getPointer(e)
-  touchDrag.value = { x: p.x, y: p.y }
+  touchDrag.value = { x: p.x, y: p.y, startX: p.x, startY: p.y, moved: false }
 }
 
 const onPointerMove = (e) => {
   if (!dragChar.value || !touchDrag.value) return
-  e.preventDefault()
   const p = getPointer(e)
+  
+  // 计算移动距离，只有移动超过10px才算拖拽
+  const dx = Math.abs(p.x - touchDrag.value.startX)
+  const dy = Math.abs(p.y - touchDrag.value.startY)
+  
+  if (!touchDrag.value.moved && (dx > 10 || dy > 10)) {
+    touchDrag.value.moved = true
+  }
+  
+  // 只有在拖拽状态时才阻止默认行为
+  if (touchDrag.value.moved) {
+    e.preventDefault()
+  }
+  
   touchDrag.value.x = p.x
   touchDrag.value.y = p.y
 }
 
 const onPointerEnd = (e) => {
-  if (!dragChar.value || !dragFrom.value) return
-  if (e && e.changedTouches) e.preventDefault()
-  const p = getPointer(e.changedTouches ? e : e)
-  const hit = getSlotAtPoint(p.x, p.y)
+  if (!dragChar.value || !dragFrom.value || !touchDrag.value) return
   
-  if (hit && hit.type === 'slot') {
-    onDropToSlot({}, hit.lineIdx, hit.slotIdx)
-  } else if (hit && hit.type === 'pool') {
-    onDropToPool({})
-  } else {
-    // 如果没有命中任何目标，尝试最近的槽位
-    onDropToPool({})
+  // 只有在拖拽状态下才处理释放
+  if (touchDrag.value.moved) {
+    if (e && e.changedTouches) e.preventDefault()
+    const p = getPointer(e.changedTouches ? e : e)
+    const hit = getSlotAtPoint(p.x, p.y)
+    
+    if (hit && hit.type === 'slot') {
+      onDropToSlot({}, hit.lineIdx, hit.slotIdx)
+    } else if (hit && hit.type === 'pool') {
+      onDropToPool({})
+    } else {
+      onDropToPool({})
+    }
   }
+  
   touchDrag.value = null
   dragChar.value = null
   dragFrom.value = null
