@@ -156,14 +156,15 @@ const getSlotAtPoint = (x, y) => {
 
 
 const onPointerDownSlot = (e, lineIdx, slotIdx) => {
-  if (!(e.touches && e.touches.length > 0) && e.pointerType !== 'touch') return
+  // 只处理触屏事件
+  if (!e.touches || e.touches.length === 0) return
   e.preventDefault()
   const slot = grid.value[lineIdx][slotIdx]
   if (!slot || !slot.char) return
   dragChar.value = { char: slot.char, correctLine: slot.correctLine, correctSlot: slot.correctSlot }
   dragFrom.value = { type: 'slot', lineIdx, slotIdx }
   const p = getPointer(e)
-  touchDrag.value = { x: p.x, y: p.y }
+  touchDrag.value = { x: p.x, y: p.y, startX: p.x, startY: p.y }
 }
 
 const onPointerDownPool = (e, idx) => {
@@ -191,17 +192,25 @@ const onPointerEnd = (e) => {
   }
   if (e && e.changedTouches) e.preventDefault()
   
-  // 拖拽模式：用 elementFromPoint 找手指位置
-  let x = 0, y = 0
-  if (e && e.changedTouches) { x = e.changedTouches[0].clientX; y = e.changedTouches[0].clientY }
-  else { x = touchDrag.value.x; y = touchDrag.value.y }
+  // 获取释放位置
+  let x = touchDrag.value.x, y = touchDrag.value.y
+  if (e && e.changedTouches && e.changedTouches[0]) {
+    x = e.changedTouches[0].clientX
+    y = e.changedTouches[0].clientY
+  }
+  
+  // 尝试用elementFromPoint获取目标
   const hit = getSlotAtPoint(x, y)
   
   if (hit && hit.type === 'slot') {
     onDropToSlot({}, hit.lineIdx, hit.slotIdx)
+  } else if (hit && hit.type === 'pool') {
+    onDropToPool({})
   } else {
+    // 如果没命中，退回字块池
     onDropToPool({})
   }
+  
   dragChar.value = null; dragFrom.value = null; touchDrag.value = null
 }
 
@@ -467,7 +476,8 @@ const handleSkip = () => {
                 boxShadow: `0 0 16px 6px ${COLORS[slotIdx].border}`, transform: 'scale(1.2)', color: COLORS[slotIdx].text
               } : { color: slot.correctLine === lineIdx && slot.correctSlot === slotIdx ? COLORS[slot.correctSlot].text : '#6b7280' }"
             >
-              <span v-if="slot.char" :draggable="!isTouchDevice" @dragstart="onDragStartSlot($event, lineIdx, slotIdx)" @dragend="onDragEnd"
+              <span v-if="slot.char"
+                @dragstart="onDragStartSlot($event, lineIdx, slotIdx)" @dragend="onDragEnd"
                 class="w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing rounded-xl transition-all duration-300">{{ slot.char }}</span>
               <span v-else class="text-gray-700">·</span>
             </div>
@@ -477,7 +487,7 @@ const handleSkip = () => {
         <div @dragover="onDragOver" @drop="onDropToPool"
           data-pool="true"
           class="flex flex-wrap justify-center gap-2 mb-8 p-4 glass-card min-h-[56px] border-2 border-dashed border-gray-700">
-          <div v-for="(item, idx) in pool" :key="item.id" :draggable="!isTouchDevice"
+          <div v-for="(item, idx) in pool" :key="item.id"
             @dragstart="onDragStartPool($event, idx)" @dragend="onDragEnd"
             @touchstart="onPointerDownPool($event, idx)" @touchend="onPointerEnd"
             class="w-12 h-12 rounded-xl flex items-center justify-center font-bold cursor-grab active:cursor-grabbing transition-all duration-200 select-none border-2 text-xl"
