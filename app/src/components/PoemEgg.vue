@@ -131,8 +131,6 @@ const wrongFlash = ref(null)
 
 // ── 触屏拖拽兼容 ──
 const touchDrag = ref(null)
-const touchGhost = ref(null)
-
 const isTouchDevice = ref('ontouchstart' in window)
 
 const getPointer = (e) => {
@@ -141,102 +139,71 @@ const getPointer = (e) => {
   return { x: t.clientX, y: t.clientY }
 }
 
-// 获取手指下命中哪个槽位（grid 或 pool）
 const getSlotAtPoint = (x, y) => {
   const el = document.elementFromPoint(x, y)
   if (!el) return null
-  
-  // 向上查找槽位元素
-  let current = el
-  while (current && current !== document.body) {
-    if (current.dataset && current.dataset.slotIdx !== undefined) {
-      return { 
-        type: 'slot', 
-        lineIdx: parseInt(current.dataset.lineIdx), 
-        slotIdx: parseInt(current.dataset.slotIdx) 
-      }
-    }
-    if (current.dataset && current.dataset.pool !== undefined) {
+  let cur = el
+  while (cur && cur !== document.body) {
+    if (cur.dataset && cur.dataset.slotIdx !== undefined)
+      return { type: 'slot', lineIdx: parseInt(cur.dataset.lineIdx), slotIdx: parseInt(cur.dataset.slotIdx) }
+    if (cur.dataset && cur.dataset.pool !== undefined)
       return { type: 'pool' }
-    }
-    current = current.parentElement
+    cur = cur.parentElement
   }
   return null
 }
 
+
+
 const onPointerDownSlot = (e, lineIdx, slotIdx) => {
   if (!(e.touches && e.touches.length > 0) && e.pointerType !== 'touch') return
+  e.preventDefault()
   const slot = grid.value[lineIdx][slotIdx]
-  if (!slot.char) return
-  // 不在touchstart时阻止默认行为，让touchmove时再阻止
+  if (!slot || !slot.char) return
   dragChar.value = { char: slot.char, correctLine: slot.correctLine, correctSlot: slot.correctSlot }
   dragFrom.value = { type: 'slot', lineIdx, slotIdx }
   const p = getPointer(e)
-  touchDrag.value = { x: p.x, y: p.y, startX: p.x, startY: p.y, moved: false }
+  touchDrag.value = { x: p.x, y: p.y }
 }
 
 const onPointerDownPool = (e, idx) => {
-  // 不在touchstart时阻止默认行为
-  dragChar.value = { char: pool.value[idx].char, correctLine: pool.value[idx].correctLine, correctSlot: pool.value[idx].correctSlot }
+  e.preventDefault()
+  const item = pool.value[idx]
+  if (!item) return
+  dragChar.value = { char: item.char, correctLine: item.correctLine, correctSlot: item.correctSlot }
   dragFrom.value = { type: 'pool', idx }
   const p = getPointer(e)
-  touchDrag.value = { x: p.x, y: p.y, startX: p.x, startY: p.y, moved: false }
+  touchDrag.value = { x: p.x, y: p.y }
 }
 
 const onPointerMove = (e) => {
   if (!dragChar.value || !touchDrag.value) return
+  e.preventDefault()
   const p = getPointer(e)
-  
-  // 计算移动距离，只有移动超过10px才算拖拽
-  const dx = Math.abs(p.x - touchDrag.value.startX)
-  const dy = Math.abs(p.y - touchDrag.value.startY)
-  
-  if (!touchDrag.value.moved && (dx > 10 || dy > 10)) {
-    touchDrag.value.moved = true
-  }
-  
-  // 只有在拖拽状态时才阻止默认行为
-  if (touchDrag.value.moved) {
-    e.preventDefault()
-  }
-  
   touchDrag.value.x = p.x
   touchDrag.value.y = p.y
 }
 
 const onPointerEnd = (e) => {
-  if (!dragChar.value || !dragFrom.value || !touchDrag.value) return
-  
-  // 只有在拖拽状态下才处理释放
-  if (touchDrag.value.moved) {
-    if (e && e.changedTouches) e.preventDefault()
-    const p = getPointer(e.changedTouches ? e : e)
-    const hit = getSlotAtPoint(p.x, p.y)
-    
-    if (hit && hit.type === 'slot') {
-      onDropToSlot({}, hit.lineIdx, hit.slotIdx)
-    } else if (hit && hit.type === 'pool') {
-      onDropToPool({})
-    } else {
-      onDropToPool({})
-    }
+  if (!dragChar.value || !dragFrom.value || !touchDrag.value) {
+    dragChar.value = null; dragFrom.value = null; touchDrag.value = null
+    return
   }
+  if (e && e.changedTouches) e.preventDefault()
   
-  touchDrag.value = null
-  dragChar.value = null
-  dragFrom.value = null
+  // 拖拽模式：用 elementFromPoint 找手指位置
+  let x = 0, y = 0
+  if (e && e.changedTouches) { x = e.changedTouches[0].clientX; y = e.changedTouches[0].clientY }
+  else { x = touchDrag.value.x; y = touchDrag.value.y }
+  const hit = getSlotAtPoint(x, y)
+  
+  if (hit && hit.type === 'slot') {
+    onDropToSlot({}, hit.lineIdx, hit.slotIdx)
+  } else {
+    onDropToPool({})
+  }
+  dragChar.value = null; dragFrom.value = null; touchDrag.value = null
 }
-
-const onPointerUpPool = (e) => {
-  if (!dragChar.value || !dragFrom.value) return
-  if (e && e.preventDefault) e.preventDefault()
-  onDropToPool({})
-  touchDrag.value = null
-  dragChar.value = null
-  dragFrom.value = null
-}
-
-
 
 const allFilled = computed(() => {
   return grid.value.every(line => line.every(slot => slot.char !== null))
@@ -507,7 +474,7 @@ const handleSkip = () => {
           </div>
         </div>
 
-        <div @dragover="onDragOver" @drop="onDropToPool" @touchend="onPointerUpPool"
+        <div @dragover="onDragOver" @drop="onDropToPool"
           data-pool="true"
           class="flex flex-wrap justify-center gap-2 mb-8 p-4 glass-card min-h-[56px] border-2 border-dashed border-gray-700">
           <div v-for="(item, idx) in pool" :key="item.id" :draggable="!isTouchDevice"
