@@ -58,12 +58,10 @@ const startTypewriter = () => {
   }, 60)
   typeTimer = interval
 
-  // 音频播完后显示按钮
   introAudio.addEventListener('ended', () => {
     introReady.value = true
   }, { once: true })
 
-  // 兜底：如果音频比打字短，打字结束后也显示按钮
   trackTimer(() => {
     if (!introReady.value) introReady.value = true
   }, introText.length * 60 + 1000)
@@ -75,7 +73,6 @@ onMounted(() => {
 
 const correctAnswer = poem.join('')
 
-// 阶段切换时停止所有音频
 watch(() => store.currentStage, (newStage) => {
   if (newStage !== 'poemEgg') {
     introAudio.pause()
@@ -83,9 +80,7 @@ watch(() => store.currentStage, (newStage) => {
     readAudio.pause()
     readAudio.currentTime = 0
     if (typeTimer) { clearInterval(typeTimer); typeTimer = null }
-    // 退出时移除事件
-    document.removeEventListener('touchmove', onPointerMove)
-    document.removeEventListener('touchend', onPointerEnd)
+    cleanupPointerListeners()
   }
 })
 
@@ -98,8 +93,7 @@ onUnmounted(() => {
   introAudio.currentTime = 0
   readAudio.pause()
   readAudio.currentTime = 0
-  document.removeEventListener('touchmove', onPointerMove)
-  document.removeEventListener('touchend', onPointerEnd)
+  cleanupPointerListeners()
 })
 
 const enterPuzzle = () => {
@@ -108,11 +102,6 @@ const enterPuzzle = () => {
   showIntro.value = false
   readAudio.currentTime = 0
   readAudio.play().catch(() => {})
-  // 进入拼诗界面时添加触屏事件
-  if (isTouchDevice.value) {
-    document.addEventListener('touchmove', onPointerMove, { passive: false })
-    document.addEventListener('touchend', onPointerEnd)
-  }
 }
 
 // ── 拼诗逻辑 ──
@@ -125,26 +114,188 @@ const revealSlot = ref(-1)
 const showBanner = ref(false)
 const flashActive = ref(false)
 const particles = ref([])
-const dragChar = ref(null)
-const dragFrom = ref(null)
 const wrongFlash = ref(null)
 
-// ── 触屏拖拽兼容 ──
-const touchDrag = ref(null)
-const isTouchDevice = ref('ontouchstart' in window)
+// ── 统一交互（点击 + 拖拽） ──
+// 只有三种操作模式：
+//   mode='none'       - 无操作
+//   mode='pick'       - 刚刚选中了一个字块（等待操作）
+//   mode='drag'       - 正在拖拽中
+const dragState = ref({ mode: 'none' })
 
-// ── 点击移动（备选方案）──
-const clickSelected = ref(null) // { type: 'slot'|'pool', lineIdx, slotIdx, idx, char, ... }
-const pointerDownTime = ref(0) // 记录pointerdown时间
-const pointerDownPos = ref(null) // 记录pointerdown位置
+// 记录 pointerdown 时的位置，用于区分点击和拖拽
+let pointerStart = null
 
-const getPointer = (e) => {
-  if (!e) return { x: 0, y: 0 }
-  const t = e.touches ? e.touches[0] : e
-  return { x: t.clientX, y: t.clientY }
+function cleanupPointerListeners() {
+  document.removeEventListener('pointermove', onPointerMove)
+  document.removeEventListener('pointerup', onPointerUp)
 }
 
-const getSlotAtPoint = (x, y) => {
+// ── 核心操作函数 ──
+
+// 从池子或槽位"拿起"一个字块
+function pickUp(char, correctLine, correctSlot, source) {
+  dragState.value = { mode: 'pick', char, correctLine, correctSlot, source }
+}
+
+// 放到指定槽位（lineIdx, slotIdx）
+function placeToSlot(lineIdx, slotIdx) {
+  if (dragState.value.mode === 'none') return
+
+  const { char, correctLine, correctSlot, source } = dragState.value
+  const target = grid.value[lineIdx][slotIdx]
+
+  if (source.type === 'pool') {
+    // 从池子放到槽位
+    const poolItem = pool.value.find(p => p.char === char && p.correctLine === correctLine && p.correctSlot === correctSlot)
+    if (!poolItem) return
+
+    if (target.char !== null) {
+      // 目标有字 → 交换回池子
+      pool.value.push({ id: Date.now() + Math.random(), char: target.char, correctLine: target.correctLine, correctSlot: target.correctSlot })
+    }
+    target.char = char
+    target.correctLine = correctLine
+    target.correctSlot = correctSlot
+    const idx = pool.value.indexOf(poolItem)
+    if (idx >= 0) pool.value.splice(idx, 1)
+  } else if (source.type === 'slot') {
+    // 从槽位放到槽位 → 交换
+    const src = grid.value[source.lineIdx]?.[source.slotIdx]
+    if (!src) return
+
+    const tempChar = target.char
+    const tempLine = target.correctLine
+    const tempSlot = target.correctSlot
+    target.char = src.char
+    target.correctLine = src.correctLine
+    target.correctSlot = src.correctSlot
+    src.char = tempChar
+    src.correctLine = tempLine
+    src.correctSlot = tempSlot
+  }
+
+  dragState.value = { mode: 'none' }
+}
+
+// 退回池子
+function returnToPool() {
+  if (dragState.value.mode === 'none') return
+  const { source } = dragState.value
+  if (source.type === 'slot') {
+    const src = grid.value[source.lineIdx]?.[source.slotIdx]
+    if (src && src.char !== null) {
+      pool.value.push({ id: Date.now() + Math.random(), char: src.char, correctLine: src.correctLine, correctSlot: src.correctSlot })
+      src.char = null
+      src.correctLine = -1
+      src.correctSlot = -1
+    }
+  }
+  dragState.value = { mode: 'none' }
+}
+
+// ── 点击交互 ──
+
+function onSlotClick(lineIdx, slotIdx) {
+  const slot = grid.value[lineIdx][slotIdx]
+
+  if (dragState.value.mode === 'pick') {
+    // 已有选中字块
+    if (slot.char) {
+      // 目标有字 → 交换
+      placeToSlot(lineIdx, slotIdx)
+    } else {
+      // 目标为空 → 放入
+      placeToSlot(lineIdx, slotIdx)
+    }
+  } else if (dragState.value.mode === 'none') {
+    // 没有选中字块 → 点选槽位上的字块
+    if (slot.char) {
+      pickUp(slot.char, slot.correctLine, slot.correctSlot, { type: 'slot', lineIdx, slotIdx })
+    }
+  }
+}
+
+function onPoolClick(idx) {
+  if (dragState.value.mode === 'pick') {
+    // 有选中字块 → 退回池子
+    returnToPool()
+  } else if (dragState.value.mode === 'none') {
+    const item = pool.value[idx]
+    if (!item) return
+    pickUp(item.char, item.correctLine, item.correctSlot, { type: 'pool', idx })
+  }
+}
+
+// ── 拖拽交互（PC 指针事件 + 触屏） ──
+
+function onPointerDown(e, type, arg1, arg2) {
+  // 只用于启动拖拽，不干扰点击
+  if (e.button !== 0 && !e.touches) return
+  pointerStart = { x: e.clientX ?? e.touches[0].clientX, y: e.clientY ?? e.touches[0].clientY, time: Date.now(), type, arg1, arg2 }
+
+  // 注册全局 move/up 监听
+  document.addEventListener('pointermove', onPointerMove, { passive: false })
+  document.addEventListener('pointerup', onPointerUp)
+}
+
+function onPointerMove(e) {
+  if (!pointerStart) return
+  const dx = Math.abs(e.clientX - pointerStart.x)
+  const dy = Math.abs(e.clientY - pointerStart.y)
+
+  // 移动超过 6px 才启动拖拽
+  if (dx > 6 || dy > 6) {
+    // 如果还没进入拖拽模式，启动
+    if (dragState.value.mode !== 'drag') {
+      const { type, arg1, arg2 } = pointerStart
+      if (type === 'slot') {
+        const slot = grid.value[arg1]?.[arg2]
+        if (!slot?.char) return
+        dragState.value = {
+          mode: 'drag',
+          char: slot.char,
+          correctLine: slot.correctLine,
+          correctSlot: slot.correctSlot,
+          source: { type: 'slot', lineIdx: arg1, slotIdx: arg2 }
+        }
+      } else if (type === 'pool') {
+        const item = pool.value[arg1]
+        if (!item) return
+        dragState.value = {
+          mode: 'drag',
+          char: item.char,
+          correctLine: item.correctLine,
+          correctSlot: item.correctSlot,
+          source: { type: 'pool', idx: arg1 }
+        }
+      }
+    }
+  }
+}
+
+function onPointerUp(e) {
+  document.removeEventListener('pointermove', onPointerMove)
+  document.removeEventListener('pointerup', onPointerUp)
+
+  if (dragState.value.mode === 'drag') {
+    // 拖拽结束，找目标位置
+    const hit = getSlotElement(e)
+    if (hit && hit.type === 'slot') {
+      placeToSlot(hit.lineIdx, hit.slotIdx)
+    } else {
+      returnToPool()
+    }
+  } else if (dragState.value.mode === 'pick') {
+    // 如果是 pick 状态可能是从拖拽降级为点击（没拖起来）, 保持 pick 状态
+  }
+
+  pointerStart = null
+}
+
+function getSlotElement(e) {
+  const x = e.clientX
+  const y = e.clientY
   const el = document.elementFromPoint(x, y)
   if (!el) return null
   let cur = el
@@ -156,153 +307,6 @@ const getSlotAtPoint = (x, y) => {
     cur = cur.parentElement
   }
   return null
-}
-
-// ── 点击移动逻辑 ──
-const handleClickSlot = (lineIdx, slotIdx) => {
-  // 触屏拖拽中忽略click（touchend后触发）
-  if (touchDrag.value) return
-
-  // 计算pointerdown到click的时间和距离
-  const now = Date.now()
-  const timeDiff = now - pointerDownTime.value
-  const slot = grid.value[lineIdx][slotIdx]
-  
-  // 如果是拖拽操作（时间>300ms或有移动），忽略click
-  if (timeDiff > 300) {
-    pointerDownTime.value = 0
-    pointerDownPos.value = null
-    return
-  }
-  
-  pointerDownTime.value = 0
-  pointerDownPos.value = null
-  
-  // 如果当前有选中的字块
-  if (clickSelected.value) {
-    // 点击空槽位：放入字块
-    if (!slot.char) {
-      doDropToSlot(lineIdx, slotIdx)
-      clickSelected.value = null
-      return
-    }
-    // 点击有字块的槽位：交换
-    if (slot.char && clickSelected.value.type === 'slot') {
-      doDropToSlot(lineIdx, slotIdx)
-      clickSelected.value = null
-      return
-    }
-    // 点击字块池：退回
-    if (clickSelected.value.type === 'slot') {
-      doDropToPool()
-      clickSelected.value = null
-      return
-    }
-  }
-  
-  // 没有选中字块时：选中当前字块
-  if (slot.char) {
-    dragChar.value = { char: slot.char, correctLine: slot.correctLine, correctSlot: slot.correctSlot }
-    dragFrom.value = { type: 'slot', lineIdx, slotIdx }
-    clickSelected.value = { type: 'slot', lineIdx, slotIdx }
-  }
-}
-
-const handleClickPool = (idx) => {
-  // 触屏拖拽中忽略click（touchend后触发）
-  if (touchDrag.value) return
-
-  // 计算pointerdown到click的时间
-  const now = Date.now()
-  const timeDiff = now - pointerDownTime.value
-  
-  // 如果是拖拽操作，忽略click
-  if (timeDiff > 300) {
-    pointerDownTime.value = 0
-    pointerDownPos.value = null
-    return
-  }
-  
-  pointerDownTime.value = 0
-  pointerDownPos.value = null
-  
-  const item = pool.value[idx]
-  if (!item) return
-  
-  // 如果当前有选中的字块，先退回
-  if (clickSelected.value) {
-    if (clickSelected.value.type === 'slot') {
-      doDropToPool()
-    }
-    clickSelected.value = null
-  }
-  
-  // 选中字块池中的字块
-  dragChar.value = { char: item.char, correctLine: item.correctLine, correctSlot: item.correctSlot }
-  dragFrom.value = { type: 'pool', idx }
-  clickSelected.value = { type: 'pool', idx }
-}
-
-// ── 触屏拖拽 ──
-const onPointerDownSlot = (e, lineIdx, slotIdx) => {
-  // 只处理触屏事件
-  if (!e.touches || e.touches.length === 0) return
-  e.preventDefault()
-  pointerDownTime.value = Date.now()
-  const slot = grid.value[lineIdx][slotIdx]
-  if (!slot || !slot.char) return
-  dragChar.value = { char: slot.char, correctLine: slot.correctLine, correctSlot: slot.correctSlot }
-  dragFrom.value = { type: 'slot', lineIdx, slotIdx }
-  const p = getPointer(e)
-  touchDrag.value = { x: p.x, y: p.y, startX: p.x, startY: p.y }
-}
-
-const onPointerDownPool = (e, idx) => {
-  e.preventDefault()
-  pointerDownTime.value = Date.now()
-  const item = pool.value[idx]
-  if (!item) return
-  dragChar.value = { char: item.char, correctLine: item.correctLine, correctSlot: item.correctSlot }
-  dragFrom.value = { type: 'pool', idx }
-  const p = getPointer(e)
-  touchDrag.value = { x: p.x, y: p.y }
-}
-
-const onPointerMove = (e) => {
-  if (!dragChar.value || !touchDrag.value) return
-  e.preventDefault()
-  const p = getPointer(e)
-  touchDrag.value.x = p.x
-  touchDrag.value.y = p.y
-}
-
-const onPointerEnd = (e) => {
-  if (!dragChar.value || !dragFrom.value || !touchDrag.value) {
-    dragChar.value = null; dragFrom.value = null; touchDrag.value = null
-    return
-  }
-  if (e && e.changedTouches) e.preventDefault()
-  
-  // 获取释放位置
-  let x = touchDrag.value.x, y = touchDrag.value.y
-  if (e && e.changedTouches && e.changedTouches[0]) {
-    x = e.changedTouches[0].clientX
-    y = e.changedTouches[0].clientY
-  }
-  
-  // 尝试用elementFromPoint获取目标
-  const hit = getSlotAtPoint(x, y)
-  
-  if (hit && hit.type === 'slot') {
-    doDropToSlot(hit.lineIdx, hit.slotIdx)
-  } else if (hit && hit.type === 'pool') {
-    doDropToPool()
-  } else {
-    // 如果没命中，退回字块池
-    doDropToPool()
-  }
-  
-  dragChar.value = null; dragFrom.value = null; touchDrag.value = null
 }
 
 const allFilled = computed(() => {
@@ -337,96 +341,6 @@ const initPuzzle = () => {
 }
 
 initPuzzle()
-
-const onDragStartPool = (e, idx) => {
-  pointerDownTime.value = Date.now()
-  dragChar.value = { char: pool.value[idx].char, correctLine: pool.value[idx].correctLine, correctSlot: pool.value[idx].correctSlot }
-  dragFrom.value = { type: 'pool', idx }
-  e.dataTransfer.effectAllowed = 'move'
-  e.dataTransfer.setData('text/plain', pool.value[idx].char)
-}
-
-const onDragStartSlot = (e, lineIdx, slotIdx) => {
-  pointerDownTime.value = Date.now()
-  const slot = grid.value[lineIdx][slotIdx]
-  if (!slot.char) return
-  dragChar.value = { char: slot.char, correctLine: slot.correctLine, correctSlot: slot.correctSlot }
-  dragFrom.value = { type: 'slot', lineIdx, slotIdx }
-  e.dataTransfer.effectAllowed = 'move'
-  e.dataTransfer.setData('text/plain', slot.char)
-}
-
-const onDragOver = (e) => {
-  e.preventDefault()
-  e.dataTransfer.dropEffect = 'move'
-}
-
-const doDropToSlot = (lineIdx, slotIdx) => {
-  if (!dragChar.value || !dragFrom.value) return
-
-  const slot = grid.value[lineIdx][slotIdx]
-
-  if (dragFrom.value.type === 'pool') {
-    const srcIdx = dragFrom.value.idx
-    if (srcIdx < 0 || srcIdx >= pool.value.length) return
-
-    if (slot.char !== null) {
-      pool.value.push({ id: Date.now() + Math.random(), char: slot.char, correctLine: slot.correctLine, correctSlot: slot.correctSlot })
-    }
-    slot.char = dragChar.value.char
-    slot.correctLine = dragChar.value.correctLine
-    slot.correctSlot = dragChar.value.correctSlot
-    pool.value.splice(srcIdx, 1)
-  } else if (dragFrom.value.type === 'slot') {
-    const src = grid.value[dragFrom.value.lineIdx]?.[dragFrom.value.slotIdx]
-    if (!src) return
-    const tempChar = slot.char
-    const tempLine = slot.correctLine
-    const tempSlot = slot.correctSlot
-    slot.char = src.char
-    slot.correctLine = src.correctLine
-    slot.correctSlot = src.correctSlot
-    src.char = tempChar
-    src.correctLine = tempLine
-    src.correctSlot = tempSlot
-  }
-
-  grid.value.forEach(line => line.forEach(s => { delete s._hover }))
-  dragChar.value = null
-  dragFrom.value = null
-}
-
-const doDropToPool = () => {
-  if (!dragChar.value || !dragFrom.value) return
-
-  if (dragFrom.value.type === 'slot') {
-    const src = grid.value[dragFrom.value.lineIdx]?.[dragFrom.value.slotIdx]
-    if (src && src.char !== null) {
-      pool.value.push({ id: Date.now() + Math.random(), char: src.char, correctLine: src.correctLine, correctSlot: src.correctSlot })
-      src.char = null
-      src.correctLine = -1
-      src.correctSlot = -1
-    }
-  }
-
-  dragChar.value = null
-  dragFrom.value = null
-}
-
-const onDropToSlot = (e, lineIdx, slotIdx) => {
-  e.preventDefault()
-  doDropToSlot(lineIdx, slotIdx)
-}
-
-const onDropToPool = (e) => {
-  e.preventDefault()
-  doDropToPool()
-}
-
-const onDragEnd = () => {
-  dragChar.value = null
-  dragFrom.value = null
-}
 
 const checkAnswer = () => {
   const userAnswer = grid.value.map(line => line.map(s => s.char || '').join('')).join('')
@@ -492,7 +406,6 @@ const handleSkip = () => {
   <div>
     <!-- ═══ 打字机引言界面 ═══ -->
     <div v-if="showIntro" class="fixed inset-0 z-50 flex items-center justify-center bg-black">
-      <!-- 背景光效 -->
       <div class="absolute inset-0 overflow-hidden pointer-events-none">
         <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-20"
           style="background: radial-gradient(circle, rgba(147,51,234,0.4) 0%, transparent 70%); animation: pulse 3s ease-in-out infinite;">
@@ -502,9 +415,7 @@ const handleSkip = () => {
         </div>
       </div>
 
-      <!-- 打字机内容 -->
       <div class="relative z-10 max-w-3xl mx-auto px-8 text-center">
-        <!-- 霓虹光标文字 -->
         <div class="min-h-[200px] flex items-center justify-center">
           <p class="text-2xl sm:text-3xl leading-relaxed text-gray-200">
             <span v-for="(char, i) in introText.slice(0, typedChars)" :key="i"
@@ -515,12 +426,10 @@ const handleSkip = () => {
                 transition: 'text-shadow 0.3s ease'
               }"
             >{{ char }}</span>
-            <!-- 光标 -->
             <span v-if="typedChars < introText.length" class="inline-block w-[3px] h-[1.2em] bg-purple-400 ml-1 align-middle" style="animation: blink 0.8s step-end infinite;"></span>
           </p>
         </div>
 
-        <!-- 点击继续 -->
         <Transition name="fade">
           <button
             v-if="introReady"
@@ -567,35 +476,32 @@ const handleSkip = () => {
           <div v-for="(line, lineIdx) in grid" :key="lineIdx" class="flex justify-center gap-2">
             <div v-for="(slot, slotIdx) in line" :key="`${lineIdx}-${slotIdx}`"
               :data-slot-idx="slotIdx" :data-line-idx="lineIdx"
-              @dragover="onDragOver" @drop="onDropToSlot($event, lineIdx, slotIdx)"
-              @touchstart="onPointerDownSlot($event, lineIdx, slotIdx)"
-              @click="handleClickSlot(lineIdx, slotIdx)"
+              @pointerdown="onPointerDown($event, 'slot', lineIdx, slotIdx)"
+              @click.stop="onSlotClick(lineIdx, slotIdx)"
               class="w-12 h-12 rounded-xl flex items-center justify-center font-bold border-2 border-dashed transition-all duration-200 select-none text-xl cursor-pointer"
               :class="[
-                dragChar && !solved ? 'border-purple-500/50 bg-purple-500/5' : 'border-gray-700 bg-gray-800/50',
-                clickSelected && clickSelected.type === 'slot' && clickSelected.lineIdx === lineIdx && clickSelected.slotIdx === slotIdx ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-transparent' : ''
+                dragState.mode !== 'none' ? 'border-purple-500/50 bg-purple-500/5' : 'border-gray-700 bg-gray-800/50',
+                dragState.mode !== 'none' && dragState.source?.type === 'slot' && dragState.source.lineIdx === lineIdx && dragState.source.slotIdx === slotIdx ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-transparent' : ''
               ]"
               :style="revealLine === lineIdx && revealSlot === slotIdx ? {
                 background: COLORS[slotIdx].bg, borderColor: COLORS[slotIdx].border,
                 boxShadow: `0 0 16px 6px ${COLORS[slotIdx].border}`, transform: 'scale(1.2)', color: COLORS[slotIdx].text
               } : { color: slot.correctLine === lineIdx && slot.correctSlot === slotIdx ? COLORS[slot.correctSlot].text : '#6b7280' }"
             >
-              <span v-if="slot.char"
-                @dragstart="onDragStartSlot($event, lineIdx, slotIdx)" @dragend="onDragEnd"
-                class="w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing rounded-xl transition-all duration-300">{{ slot.char }}</span>
-              <span v-else class="text-gray-700">·</span>
+              <span class="w-full h-full flex items-center justify-center rounded-xl transition-all duration-300 select-none" :class="{ 'cursor-grab': !slot.char, 'cursor-pointer': slot.char }">{{ slot.char || '·' }}</span>
             </div>
           </div>
         </div>
 
-        <div @dragover="onDragOver" @drop="onDropToPool"
-          data-pool="true"
-          class="flex flex-wrap justify-center gap-2 mb-8 p-4 glass-card min-h-[56px] border-2 border-dashed border-gray-700">
+        <div data-pool="true"
+          class="flex flex-wrap justify-center gap-2 mb-8 p-4 glass-card min-h-[56px] border-2 border-dashed border-gray-700"
+          @click.stop="onPoolClick(-1)">
           <div v-for="(item, idx) in pool" :key="item.id"
-            @dragstart="onDragStartPool($event, idx)" @dragend="onDragEnd"
-            @touchstart="onPointerDownPool($event, idx)" @touchend="onPointerEnd"
-            @click="handleClickPool(idx)"
-            class="w-12 h-12 rounded-xl flex items-center justify-center font-bold cursor-grab active:cursor-grabbing transition-all duration-200 select-none border-2 text-xl"
+            :data-pool-item="idx"
+            @pointerdown="onPointerDown($event, 'pool', idx)"
+            @click.stop="onPoolClick(idx)"
+            class="w-12 h-12 rounded-xl flex items-center justify-center font-bold transition-all duration-200 select-none border-2 text-xl cursor-pointer"
+            :class="{ 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-transparent': dragState.mode !== 'none' && dragState.source?.type === 'pool' && dragState.source.idx === idx }"
             :style="{ background: item.correctSlot >= 0 ? COLORS[item.correctSlot].bg : 'rgba(20,20,35,0.8)', borderColor: item.correctSlot >= 0 ? COLORS[item.correctSlot].border : 'rgba(75,85,99,0.5)', color: item.correctSlot >= 0 ? COLORS[item.correctSlot].text : '#9ca3af' }">
             {{ item.char }}
           </div>
@@ -608,7 +514,7 @@ const handleSkip = () => {
           <button v-if="!solved" @click="handleSkip"
             class="w-full py-4 px-8 border-2 border-gray-700 text-gray-400 font-bold rounded-2xl hover:border-gray-500 hover:text-gray-200 transition-all text-xl">跳过</button>
         </div>
-        <p class="text-gray-500 mt-5 text-center text-xs">提示：拖动字块到格子中，或点击选中后点击目标位置放置</p>
+        <p class="text-gray-500 mt-5 text-center text-xs">提示：点击选中字块，再点击目标位置放置。或直接拖拽字块到格子中。</p>
       </div>
     </div>
   </div>
