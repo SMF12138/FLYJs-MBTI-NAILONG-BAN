@@ -18,6 +18,7 @@ import ProgressBar from './components/ProgressBar.vue'
 
 const store = useTestStore()
 const showInfo = ref(false)
+const showWelcome = ref(false)
 const particles = ref([])
 let particleInterval = null
 const MAX_PARTICLES = 30
@@ -96,6 +97,13 @@ onMounted(() => {
   particleInterval = setInterval(createParticle, 300)
   window.addEventListener('keydown', handleKeydown)
   window.addEventListener('click', handleGlobalClick)
+  
+  // 检查是否首次访问
+  const hasVisited = localStorage.getItem('mbti-visited')
+  if (!hasVisited) {
+    showWelcome.value = true
+    localStorage.setItem('mbti-visited', 'true')
+  }
 })
 
 onUnmounted(() => {
@@ -254,6 +262,26 @@ const handleKeydown = (e) => {
               <p class="text-cyan-400 font-semibold text-xl">📧 flyjssmf@gmail.com</p>
             </div>
           </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 欢迎提示弹窗 -->
+    <Transition name="fade">
+      <div v-if="showWelcome" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" @click.self="showWelcome = false">
+        <div class="glass-card p-8 sm:p-10 max-w-lg w-full mx-4 animate-fade-in">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-2xl font-bold text-white gradient-text">浏览器提示</h3>
+            <button @click="showWelcome = false" class="text-gray-400 hover:text-white text-2xl transition-colors">&times;</button>
+          </div>
+          <div class="space-y-4 text-gray-300 text-lg leading-relaxed">
+            <p>请使用<span class="text-purple-400 font-semibold">电脑浏览器</span>打开该网页，推荐使用<span class="text-cyan-400 font-semibold">谷歌、火狐、Edge</span>默认浏览器。</p>
+            <p>目前开发者正在进行<span class="text-amber-400 font-semibold">移动端适配</span>，若使用移动端或电脑其他浏览器访问时出现异常，请更换几个浏览器进行尝试，或联系我们的策划：</p>
+            <div class="glass-card p-4 border-l-4 border-cyan-500">
+              <p class="text-cyan-400 font-semibold text-xl">📧 flyjssmf@gmail.com</p>
+            </div>
+          </div>
+          <button @click="showWelcome = false" class="mt-6 w-full py-3 bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold rounded-2xl hover:opacity-90 transition-all text-xl btn-primary">我知道了</button>
         </div>
       </div>
     </Transition>
