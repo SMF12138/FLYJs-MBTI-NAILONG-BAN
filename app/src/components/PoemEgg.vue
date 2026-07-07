@@ -493,7 +493,7 @@ const handleSkip = () => {
               :data-slot-idx="slotIdx" :data-line-idx="lineIdx"
               @dragover="onDragOver" @drop="onDropToSlot($event, lineIdx, slotIdx)"
               @touchstart="onPointerDownSlot($event, lineIdx, slotIdx)"
-              class="w-12 h-12 rounded-xl flex items-center justify-center font-bold border-2 border-dashed transition-all duration-200 select-none text-xl touch-none"
+              class="w-12 h-12 rounded-xl flex items-center justify-center font-bold border-2 border-dashed transition-all duration-200 select-none text-xl"
               :class="[dragChar && !solved ? 'border-purple-500/50 bg-purple-500/5' : 'border-gray-700 bg-gray-800/50']"
               :style="revealLine === lineIdx && revealSlot === slotIdx ? {
                 background: COLORS[slotIdx].bg, borderColor: COLORS[slotIdx].border,
@@ -513,7 +513,7 @@ const handleSkip = () => {
           <div v-for="(item, idx) in pool" :key="item.id" :draggable="!isTouchDevice"
             @dragstart="onDragStartPool($event, idx)" @dragend="onDragEnd"
             @touchstart="onPointerDownPool($event, idx)" @touchend="onPointerEnd"
-            class="w-12 h-12 rounded-xl flex items-center justify-center font-bold cursor-grab active:cursor-grabbing transition-all duration-200 select-none border-2 text-xl touch-none"
+            class="w-12 h-12 rounded-xl flex items-center justify-center font-bold cursor-grab active:cursor-grabbing transition-all duration-200 select-none border-2 text-xl"
             :style="{ background: item.correctSlot >= 0 ? COLORS[item.correctSlot].bg : 'rgba(20,20,35,0.8)', borderColor: item.correctSlot >= 0 ? COLORS[item.correctSlot].border : 'rgba(75,85,99,0.5)', color: item.correctSlot >= 0 ? COLORS[item.correctSlot].text : '#9ca3af' }">
             {{ item.char }}
           </div>
