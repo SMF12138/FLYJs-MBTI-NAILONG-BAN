@@ -135,6 +135,7 @@ const isTouchDevice = ref('ontouchstart' in window)
 
 // ── 点击移动（备选方案）──
 const clickSelected = ref(null) // { type: 'slot'|'pool', lineIdx, slotIdx, idx, char, ... }
+const isDragging = ref(false) // 标记是否正在拖拽，避免click和drag冲突
 
 const getPointer = (e) => {
   if (!e) return { x: 0, y: 0 }
@@ -158,6 +159,9 @@ const getSlotAtPoint = (x, y) => {
 
 // ── 点击移动逻辑 ──
 const handleClickSlot = (lineIdx, slotIdx) => {
+  // 如果正在拖拽，忽略click
+  if (isDragging.value) return
+  
   const slot = grid.value[lineIdx][slotIdx]
   
   // 如果当前有选中的字块
@@ -191,6 +195,9 @@ const handleClickSlot = (lineIdx, slotIdx) => {
 }
 
 const handleClickPool = (idx) => {
+  // 如果正在拖拽，忽略click
+  if (isDragging.value) return
+  
   const item = pool.value[idx]
   if (!item) return
   
@@ -302,6 +309,7 @@ const initPuzzle = () => {
 initPuzzle()
 
 const onDragStartPool = (e, idx) => {
+  isDragging.value = true
   dragChar.value = { char: pool.value[idx].char, correctLine: pool.value[idx].correctLine, correctSlot: pool.value[idx].correctSlot }
   dragFrom.value = { type: 'pool', idx }
   e.dataTransfer.effectAllowed = 'move'
@@ -309,6 +317,7 @@ const onDragStartPool = (e, idx) => {
 }
 
 const onDragStartSlot = (e, lineIdx, slotIdx) => {
+  isDragging.value = true
   const slot = grid.value[lineIdx][slotIdx]
   if (!slot.char) return
   dragChar.value = { char: slot.char, correctLine: slot.correctLine, correctSlot: slot.correctSlot }
@@ -378,6 +387,10 @@ const onDropToPool = (e) => {
 }
 
 const onDragEnd = () => {
+  // 延迟重置isDragging，避免click事件在dragend之前触发
+  setTimeout(() => {
+    isDragging.value = false
+  }, 100)
   dragChar.value = null
   dragFrom.value = null
 }
