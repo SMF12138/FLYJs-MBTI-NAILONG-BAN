@@ -160,6 +160,9 @@ const getSlotAtPoint = (x, y) => {
 
 // ── 点击移动逻辑 ──
 const handleClickSlot = (lineIdx, slotIdx) => {
+  // 触屏拖拽中忽略click（touchend后触发）
+  if (touchDrag.value) return
+
   // 计算pointerdown到click的时间和距离
   const now = Date.now()
   const timeDiff = now - pointerDownTime.value
@@ -179,19 +182,19 @@ const handleClickSlot = (lineIdx, slotIdx) => {
   if (clickSelected.value) {
     // 点击空槽位：放入字块
     if (!slot.char) {
-      onDropToSlot({}, lineIdx, slotIdx)
+      doDropToSlot(lineIdx, slotIdx)
       clickSelected.value = null
       return
     }
     // 点击有字块的槽位：交换
     if (slot.char && clickSelected.value.type === 'slot') {
-      onDropToSlot({}, lineIdx, slotIdx)
+      doDropToSlot(lineIdx, slotIdx)
       clickSelected.value = null
       return
     }
     // 点击字块池：退回
     if (clickSelected.value.type === 'slot') {
-      onDropToPool({})
+      doDropToPool()
       clickSelected.value = null
       return
     }
@@ -206,6 +209,9 @@ const handleClickSlot = (lineIdx, slotIdx) => {
 }
 
 const handleClickPool = (idx) => {
+  // 触屏拖拽中忽略click（touchend后触发）
+  if (touchDrag.value) return
+
   // 计算pointerdown到click的时间
   const now = Date.now()
   const timeDiff = now - pointerDownTime.value
@@ -226,7 +232,7 @@ const handleClickPool = (idx) => {
   // 如果当前有选中的字块，先退回
   if (clickSelected.value) {
     if (clickSelected.value.type === 'slot') {
-      onDropToPool({})
+      doDropToPool()
     }
     clickSelected.value = null
   }
@@ -288,12 +294,12 @@ const onPointerEnd = (e) => {
   const hit = getSlotAtPoint(x, y)
   
   if (hit && hit.type === 'slot') {
-    onDropToSlot({}, hit.lineIdx, hit.slotIdx)
+    doDropToSlot(hit.lineIdx, hit.slotIdx)
   } else if (hit && hit.type === 'pool') {
-    onDropToPool({})
+    doDropToPool()
   } else {
     // 如果没命中，退回字块池
-    onDropToPool({})
+    doDropToPool()
   }
   
   dragChar.value = null; dragFrom.value = null; touchDrag.value = null
@@ -355,8 +361,7 @@ const onDragOver = (e) => {
   e.dataTransfer.dropEffect = 'move'
 }
 
-const onDropToSlot = (e, lineIdx, slotIdx) => {
-  e.preventDefault()
+const doDropToSlot = (lineIdx, slotIdx) => {
   if (!dragChar.value || !dragFrom.value) return
 
   const slot = grid.value[lineIdx][slotIdx]
@@ -386,14 +391,12 @@ const onDropToSlot = (e, lineIdx, slotIdx) => {
     src.correctSlot = tempSlot
   }
 
-  // 清理触屏 hover 状态
   grid.value.forEach(line => line.forEach(s => { delete s._hover }))
   dragChar.value = null
   dragFrom.value = null
 }
 
-const onDropToPool = (e) => {
-  e.preventDefault()
+const doDropToPool = () => {
   if (!dragChar.value || !dragFrom.value) return
 
   if (dragFrom.value.type === 'slot') {
@@ -408,6 +411,16 @@ const onDropToPool = (e) => {
 
   dragChar.value = null
   dragFrom.value = null
+}
+
+const onDropToSlot = (e, lineIdx, slotIdx) => {
+  e.preventDefault()
+  doDropToSlot(lineIdx, slotIdx)
+}
+
+const onDropToPool = (e) => {
+  e.preventDefault()
+  doDropToPool()
 }
 
 const onDragEnd = () => {
