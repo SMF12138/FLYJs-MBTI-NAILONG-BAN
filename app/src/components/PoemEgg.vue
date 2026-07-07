@@ -71,7 +71,11 @@ const startTypewriter = () => {
 
 onMounted(() => {
   startTypewriter()
+  document.addEventListener('touchmove', onPointerMove, { passive: false })
+  document.addEventListener('touchend', onPointerEnd)
 })
+
+const correctAnswer = poem.join('')
 
 // 阶段切换时停止所有音频
 watch(() => store.currentStage, (newStage) => {
@@ -93,6 +97,8 @@ onUnmounted(() => {
   introAudio.currentTime = 0
   readAudio.pause()
   readAudio.currentTime = 0
+  document.removeEventListener('touchmove', onPointerMove)
+  document.removeEventListener('touchend', onPointerEnd)
 })
 
 const enterPuzzle = () => {
@@ -117,7 +123,84 @@ const dragChar = ref(null)
 const dragFrom = ref(null)
 const wrongFlash = ref(null)
 
-const correctAnswer = poem.join('')
+// ── 触屏拖拽兼容 ──
+const touchDrag = ref(null)
+const touchGhost = ref(null)
+
+const getPointer = (e) => {
+  if (!e) return { x: 0, y: 0 }
+  const t = e.touches ? e.touches[0] : e
+  return { x: t.clientX, y: t.clientY }
+}
+
+// 获取手指下命中哪个槽位（grid 或 pool）
+const getSlotAtPoint = (x, y) => {
+  const el = document.elementFromPoint(x, y)
+  if (!el) return null
+  const slot = el.closest('[data-slot-idx]')
+  if (slot) {
+    return { type: 'slot', lineIdx: parseInt(slot.dataset.lineIdx), slotIdx: parseInt(slot.dataset.slotIdx) }
+  }
+  const poolEl = el.closest('[data-pool]')
+  if (poolEl) return { type: 'pool' }
+  return null
+}
+
+const onPointerDownSlot = (e, lineIdx, slotIdx) => {
+  if (!(e.touches && e.touches.length > 0) && e.pointerType !== 'touch') return
+  const slot = grid.value[lineIdx][slotIdx]
+  if (!slot.char) return
+  e.preventDefault()
+  dragChar.value = { char: slot.char, correctLine: slot.correctLine, correctSlot: slot.correctSlot }
+  dragFrom.value = { type: 'slot', lineIdx, slotIdx }
+  const p = getPointer(e)
+  touchDrag.value = { x: p.x, y: p.y }
+}
+
+const onPointerDownPool = (e, idx) => {
+  e.preventDefault()
+  dragChar.value = { char: pool.value[idx].char, correctLine: pool.value[idx].correctLine, correctSlot: pool.value[idx].correctSlot }
+  dragFrom.value = { type: 'pool', idx }
+  const p = getPointer(e)
+  touchDrag.value = { x: p.x, y: p.y }
+}
+
+const onPointerMove = (e) => {
+  if (!dragChar.value || !touchDrag.value) return
+  e.preventDefault()
+  const p = getPointer(e)
+  touchDrag.value.x = p.x
+  touchDrag.value.y = p.y
+  // 实时高亮手指下的槽位
+  const hit = getSlotAtPoint(p.x, p.y)
+  if (hit && hit.type === 'slot') {
+    const slot = grid.value[hit.lineIdx][hit.slotIdx]
+    if (slot) slot._hover = true
+  }
+}
+
+const onPointerEnd = (e) => {
+  if (!dragChar.value || !dragFrom.value) return
+  if (e && e.changedTouches) e.preventDefault()
+  const p = getPointer(e.changedTouches ? e : e)
+  const hit = getSlotAtPoint(p.x, p.y)
+  
+  if (hit && hit.type === 'slot') {
+    onDropToSlot({}, hit.lineIdx, hit.slotIdx)
+  } else {
+    onDropToPool({})
+  }
+  touchDrag.value = null
+}
+
+const onPointerUpPool = (e) => {
+  if (!dragChar.value || !dragFrom.value) return
+  if (e && e.preventDefault) e.preventDefault()
+  onDropToPool({})
+  touchDrag.value = null
+}
+
+
 
 const allFilled = computed(() => {
   return grid.value.every(line => line.every(slot => slot.char !== null))
@@ -204,6 +287,8 @@ const onDropToSlot = (e, lineIdx, slotIdx) => {
     src.correctSlot = tempSlot
   }
 
+  // 清理触屏 hover 状态
+  grid.value.forEach(line => line.forEach(s => { delete s._hover }))
   dragChar.value = null
   dragFrom.value = null
 }
@@ -370,7 +455,8 @@ const handleSkip = () => {
           <div v-for="(line, lineIdx) in grid" :key="lineIdx" class="flex justify-center gap-2">
             <div v-for="(slot, slotIdx) in line" :key="`${lineIdx}-${slotIdx}`"
               @dragover="onDragOver" @drop="onDropToSlot($event, lineIdx, slotIdx)"
-              class="w-12 h-12 rounded-xl flex items-center justify-center font-bold border-2 border-dashed transition-all duration-200 select-none text-xl"
+              @touchstart="onPointerDownSlot($event, lineIdx, slotIdx)"
+              class="w-12 h-12 rounded-xl flex items-center justify-center font-bold border-2 border-dashed transition-all duration-200 select-none text-xl touch-none"
               :class="[dragChar && !solved ? 'border-purple-500/50 bg-purple-500/5' : 'border-gray-700 bg-gray-800/50']"
               :style="revealLine === lineIdx && revealSlot === slotIdx ? {
                 background: COLORS[slotIdx].bg, borderColor: COLORS[slotIdx].border,
@@ -384,11 +470,12 @@ const handleSkip = () => {
           </div>
         </div>
 
-        <div @dragover="onDragOver" @drop="onDropToPool"
+        <div @dragover="onDragOver" @drop="onDropToPool" @touchend="onPointerUpPool"
           class="flex flex-wrap justify-center gap-2 mb-8 p-4 glass-card min-h-[56px] border-2 border-dashed border-gray-700">
           <div v-for="(item, idx) in pool" :key="item.id" draggable="true"
             @dragstart="onDragStartPool($event, idx)" @dragend="onDragEnd"
-            class="w-12 h-12 rounded-xl flex items-center justify-center font-bold cursor-grab active:cursor-grabbing transition-all duration-200 select-none border-2 text-xl"
+            @touchstart="onPointerDownPool($event, idx)" @touchend="onPointerEnd"
+            class="w-12 h-12 rounded-xl flex items-center justify-center font-bold cursor-grab active:cursor-grabbing transition-all duration-200 select-none border-2 text-xl touch-none"
             :style="{ background: item.correctSlot >= 0 ? COLORS[item.correctSlot].bg : 'rgba(20,20,35,0.8)', borderColor: item.correctSlot >= 0 ? COLORS[item.correctSlot].border : 'rgba(75,85,99,0.5)', color: item.correctSlot >= 0 ? COLORS[item.correctSlot].text : '#9ca3af' }">
             {{ item.char }}
           </div>

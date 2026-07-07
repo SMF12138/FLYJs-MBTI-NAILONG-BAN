@@ -52,6 +52,8 @@ const handleLike = () => {
   } catch (e) {}
   store.dimensionScores.D7 += 1
   store.normalizeScores()
+  // 发送点赞请求到服务器
+  fetch('/api/like', { method: 'POST' }).catch(() => {})
 }
 
 // ─── 结束测试流程 ───
