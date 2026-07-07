@@ -133,6 +133,9 @@ const wrongFlash = ref(null)
 const touchDrag = ref(null)
 const isTouchDevice = ref('ontouchstart' in window)
 
+// ── 点击移动（备选方案）──
+const clickSelected = ref(null) // { type: 'slot'|'pool', lineIdx, slotIdx, idx, char, ... }
+
 const getPointer = (e) => {
   if (!e) return { x: 0, y: 0 }
   const t = e.touches ? e.touches[0] : e
@@ -153,8 +156,59 @@ const getSlotAtPoint = (x, y) => {
   return null
 }
 
+// ── 点击移动逻辑 ──
+const handleClickSlot = (lineIdx, slotIdx) => {
+  const slot = grid.value[lineIdx][slotIdx]
+  
+  // 如果当前有选中的字块
+  if (clickSelected.value) {
+    // 点击空槽位：放入字块
+    if (!slot.char) {
+      onDropToSlot({}, lineIdx, slotIdx)
+      clickSelected.value = null
+      return
+    }
+    // 点击有字块的槽位：交换
+    if (slot.char && clickSelected.value.type === 'slot') {
+      onDropToSlot({}, lineIdx, slotIdx)
+      clickSelected.value = null
+      return
+    }
+    // 点击字块池：退回
+    if (clickSelected.value.type === 'slot') {
+      onDropToPool({})
+      clickSelected.value = null
+      return
+    }
+  }
+  
+  // 没有选中字块时：选中当前字块
+  if (slot.char) {
+    dragChar.value = { char: slot.char, correctLine: slot.correctLine, correctSlot: slot.correctSlot }
+    dragFrom.value = { type: 'slot', lineIdx, slotIdx }
+    clickSelected.value = { type: 'slot', lineIdx, slotIdx }
+  }
+}
 
+const handleClickPool = (idx) => {
+  const item = pool.value[idx]
+  if (!item) return
+  
+  // 如果当前有选中的字块，先退回
+  if (clickSelected.value) {
+    if (clickSelected.value.type === 'slot') {
+      onDropToPool({})
+    }
+    clickSelected.value = null
+  }
+  
+  // 选中字块池中的字块
+  dragChar.value = { char: item.char, correctLine: item.correctLine, correctSlot: item.correctSlot }
+  dragFrom.value = { type: 'pool', idx }
+  clickSelected.value = { type: 'pool', idx }
+}
 
+// ── 触屏拖拽 ──
 const onPointerDownSlot = (e, lineIdx, slotIdx) => {
   // 只处理触屏事件
   if (!e.touches || e.touches.length === 0) return
@@ -469,8 +523,12 @@ const handleSkip = () => {
               :data-slot-idx="slotIdx" :data-line-idx="lineIdx"
               @dragover="onDragOver" @drop="onDropToSlot($event, lineIdx, slotIdx)"
               @touchstart="onPointerDownSlot($event, lineIdx, slotIdx)"
-              class="w-12 h-12 rounded-xl flex items-center justify-center font-bold border-2 border-dashed transition-all duration-200 select-none text-xl"
-              :class="[dragChar && !solved ? 'border-purple-500/50 bg-purple-500/5' : 'border-gray-700 bg-gray-800/50']"
+              @click="handleClickSlot(lineIdx, slotIdx)"
+              class="w-12 h-12 rounded-xl flex items-center justify-center font-bold border-2 border-dashed transition-all duration-200 select-none text-xl cursor-pointer"
+              :class="[
+                dragChar && !solved ? 'border-purple-500/50 bg-purple-500/5' : 'border-gray-700 bg-gray-800/50',
+                clickSelected && clickSelected.type === 'slot' && clickSelected.lineIdx === lineIdx && clickSelected.slotIdx === slotIdx ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-transparent' : ''
+              ]"
               :style="revealLine === lineIdx && revealSlot === slotIdx ? {
                 background: COLORS[slotIdx].bg, borderColor: COLORS[slotIdx].border,
                 boxShadow: `0 0 16px 6px ${COLORS[slotIdx].border}`, transform: 'scale(1.2)', color: COLORS[slotIdx].text
@@ -490,6 +548,7 @@ const handleSkip = () => {
           <div v-for="(item, idx) in pool" :key="item.id"
             @dragstart="onDragStartPool($event, idx)" @dragend="onDragEnd"
             @touchstart="onPointerDownPool($event, idx)" @touchend="onPointerEnd"
+            @click="handleClickPool(idx)"
             class="w-12 h-12 rounded-xl flex items-center justify-center font-bold cursor-grab active:cursor-grabbing transition-all duration-200 select-none border-2 text-xl"
             :style="{ background: item.correctSlot >= 0 ? COLORS[item.correctSlot].bg : 'rgba(20,20,35,0.8)', borderColor: item.correctSlot >= 0 ? COLORS[item.correctSlot].border : 'rgba(75,85,99,0.5)', color: item.correctSlot >= 0 ? COLORS[item.correctSlot].text : '#9ca3af' }">
             {{ item.char }}
@@ -503,7 +562,7 @@ const handleSkip = () => {
           <button v-if="!solved" @click="handleSkip"
             class="w-full py-4 px-8 border-2 border-gray-700 text-gray-400 font-bold rounded-2xl hover:border-gray-500 hover:text-gray-200 transition-all text-xl">跳过</button>
         </div>
-        <p class="text-gray-500 mt-5 text-center text-xs">提示：拖动字块到格子中，拖回字块池可退回，拖拽格子间可交换</p>
+        <p class="text-gray-500 mt-5 text-center text-xs">提示：拖动字块到格子中，或点击选中后点击目标位置放置</p>
       </div>
     </div>
   </div>
