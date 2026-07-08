@@ -155,8 +155,6 @@ const handleKeydown = (e) => {
           bottom: '0',
           width: p.size + 'px',
           height: p.size + 'px',
-          animationDuration: p.duration + 's',
-          animationDelay: p.delay + 's',
           opacity: p.opacity,
           animation: `particle-float ${p.duration}s ease-out ${p.delay}s forwards`
         }"

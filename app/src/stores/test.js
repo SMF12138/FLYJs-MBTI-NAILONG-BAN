@@ -7,6 +7,73 @@ import { DIMENSION_IDS } from '../data/dimensions'
 // 彩蛋发现记录的 key 列表
 const EGG_KEYS = ['nameEgg', 'rescueEgg', 'adCloseButton', 'poemPuzzle', 'invitationTerms', 'invitationClose', 'hpZero', 'validCard', 'keyNavUsed', 'dimExplorer']
 
+// ─── 彩蛋分数集中定义 ───
+// 所有彩蛋的分数在这里定义，handler函数和normalizeScores()都从这里读取
+export const EGG_SCORES = {
+  // 邀请函
+  invitation: {
+    view_fast: { D3: 0.5 * 5 },      // <5秒
+    view_slow: { D3: -0.5 * 5 },     // >20秒
+    view: { D5: 0.5 * 2, D8: 0.3 * 3, D2: 0.3 * 3, D13: -0.3 * 3 },
+    ignore: { D5: -0.5 * 2, D8: -0.3 * 3, D2: -0.3 * 3, D13: 0.5 * 3 },
+    hiddenTerms: { D1: 0.8 * 4, D5: 0.5 * 2 },
+    closeWithoutClick: { D8: 0.5 * 3, D13: 0.5 * 3 },
+  },
+  // 名字彩蛋
+  nameEgg: {
+    found: { D1: 0.8 * 4 },
+    notFound: { D1: -0.5 * 4 },
+  },
+  // 谜题诗
+  poemEgg: {
+    solved: { D1: 0.8 * 5, D5: 0.5 * 5, D12: 0.5 * 5 },
+  },
+  // 救援彩蛋
+  rescueEgg: {
+    found: { D1: 0.8 * 4 },
+    notFound: { D1: -0.5 * 4 },
+  },
+  // 广告关闭
+  adCloseButton: { D1: 0.8 * 4 },
+  // 键盘导航
+  keyNav: { D1: 1 },
+  // 维度探索
+  dimExplorer: { D1: 1, D5: 1 },
+  // 速答超时
+  speedTimeout: { D1: -0.2, D3: -0.2 },
+  // 1元测试
+  yuan: {
+    confirm_fast: { D3: 0.8 * 5 },
+    confirm_slow: { D3: -0.5 * 5 },
+    confirm: { D14: 0.5 * 4 },
+    cancel_fast: { D3: 0.8 * 5 },
+    cancel_slow: { D3: -0.5 * 5 },
+    cancel: { D14: -0.5 * 4, D8: -0.5 * 4 },
+    input: { D8: 0.5 * 4, D14: 0.5 * 4, D11: 0.5 * 3 },
+    noInput: { D8: -0.5 * 4, D14: -0.3 * 4, D11: -0.3 * 2 },
+  },
+}
+
+// 归一化用的彩蛋分数范围（从EGG_SCORES自动计算）
+// 返回格式：{ dim: { inc: totalInc, dec: totalDec } }
+function computeEggRange() {
+  const merged = {}
+  for (const [egg, scores] of Object.entries(EGG_SCORES)) {
+    if (typeof scores === 'object' && !Array.isArray(scores)) {
+      for (const [path, dimScores] of Object.entries(scores)) {
+        if (typeof dimScores === 'object') {
+          for (const [dim, score] of Object.entries(dimScores)) {
+            if (!merged[dim]) merged[dim] = { inc: 0, dec: 0 }
+            if (score > 0) merged[dim].inc += score
+            else merged[dim].dec += score
+          }
+        }
+      }
+    }
+  }
+  return merged
+}
+
 export const useTestStore = defineStore('test', {
   state: () => ({
     currentStage: 'start',
@@ -253,20 +320,19 @@ export const useTestStore = defineStore('test', {
     handleInvitationView(elapsed) {
       this.invitationClickTime = Date.now()
       // <5秒加分, 5-20秒不变, >20秒扣分
-      this.eggScores.D3 += elapsed < 5000 ? 0.5 * 5 : elapsed > 20000 ? -0.5 * 5 : 0
-      this.eggScores.D5 += 0.5 * 2
-      this.eggScores.D8 += 0.3 * 3
-      this.eggScores.D2 += 0.3 * 3
-      this.eggScores.D13 += -0.3 * 3
+      const timingScores = elapsed < 5000 ? EGG_SCORES.invitation.view_fast
+        : elapsed > 20000 ? EGG_SCORES.invitation.view_slow : {}
+      for (const [dim, score] of Object.entries({ ...timingScores, ...EGG_SCORES.invitation.view })) {
+        this.eggScores[dim] += score
+      }
       this.invitationLayer = 2
       this.showInvitationContent = true
     },
 
     handleInvitationIgnore() {
-      this.eggScores.D5 += -0.5 * 2
-      this.eggScores.D8 += -0.3 * 3
-      this.eggScores.D2 += -0.3 * 3
-      this.eggScores.D13 += 0.5 * 3
+      for (const [dim, score] of Object.entries(EGG_SCORES.invitation.ignore)) {
+        this.eggScores[dim] += score
+      }
       this.showInvitation = false
       this.currentStage = 'normal'
     },
@@ -275,8 +341,9 @@ export const useTestStore = defineStore('test', {
       this.foundEggs.invitationTerms = true
       this.showHiddenTerms = true
       this._setTimer('hiddenTerms', () => {
-        this.eggScores.D1 += 0.8 * 4
-        this.eggScores.D5 += 0.5 * 2
+        for (const [dim, score] of Object.entries(EGG_SCORES.invitation.hiddenTerms)) {
+          this.eggScores[dim] += score
+        }
         this.normalizeScores()  // 重新计算
         this.closeInvitation()
       }, 10000)
@@ -286,16 +353,18 @@ export const useTestStore = defineStore('test', {
       this.foundEggs.invitationClose = true
       this.showHiddenTerms = false
       this._clearTimer('hiddenTerms')
-      this.eggScores.D1 += 0.8 * 4
-      this.eggScores.D5 += 0.5 * 2
+      for (const [dim, score] of Object.entries(EGG_SCORES.invitation.hiddenTerms)) {
+        this.eggScores[dim] += score
+      }
       this.normalizeScores()  // 重新计算
       this.closeInvitation()
     },
 
     closeInvitationWithoutClick() {
       this._invitationPath = 'viewNoHidden'
-      this.eggScores.D8 += 0.5 * 3
-      this.eggScores.D13 += 0.5 * 3
+      for (const [dim, score] of Object.entries(EGG_SCORES.invitation.closeWithoutClick)) {
+        this.eggScores[dim] += score
+      }
       this.closeInvitation()
     },
 
@@ -320,15 +389,15 @@ export const useTestStore = defineStore('test', {
     },
 
     handleNameEgg(found) {
-      this._handleBinaryEgg(found, 'nameEgg', { D1: 0.8 * 4 }, { D1: -0.5 * 4 })
+      this._handleBinaryEgg(found, 'nameEgg', EGG_SCORES.nameEgg.found, EGG_SCORES.nameEgg.notFound)
     },
 
     handlePoemEgg(solved) {
       if (solved) {
         this.foundEggs.poemPuzzle = true
-        this.dimensionScores.D1 += 0.8 * 5
-        this.dimensionScores.D5 += 0.5 * 5
-        this.dimensionScores.D12 += 0.5 * 5
+        for (const [dim, score] of Object.entries(EGG_SCORES.poemEgg.solved)) {
+          this.eggScores[dim] += score
+        }
       }
       this.showPoemPuzzle = false
       this.currentStage = 'normal'
@@ -337,12 +406,14 @@ export const useTestStore = defineStore('test', {
     },
 
     handleRescueEgg(found) {
-      this._handleBinaryEgg(found, 'rescueEgg', { D1: 0.8 * 4 }, { D1: -0.5 * 4 })
+      this._handleBinaryEgg(found, 'rescueEgg', EGG_SCORES.rescueEgg.found, EGG_SCORES.rescueEgg.notFound)
     },
 
     handleAdCloseButton() {
       this.foundEggs.adCloseButton = true
-      this.eggScores.D1 += 0.8 * 4
+      for (const [dim, score] of Object.entries(EGG_SCORES.adCloseButton)) {
+        this.eggScores[dim] += score
+      }
       this.normalizeScores()  // 重新计算
       this._clearAllTimers()
       this.showAd = false
@@ -361,7 +432,9 @@ export const useTestStore = defineStore('test', {
     handleKeyNav() {
       if (!this.foundEggs.keyNavUsed) {
         this.foundEggs.keyNavUsed = true
-        this.eggScores.D1 += 1
+        for (const [dim, score] of Object.entries(EGG_SCORES.keyNav)) {
+          this.eggScores[dim] += score
+        }
       }
     },
 
@@ -371,8 +444,9 @@ export const useTestStore = defineStore('test', {
       const count = Object.values(this.clickedDims).filter(v => v).length
       if (count === 15 && !this.foundEggs.dimExplorer) {
         this.foundEggs.dimExplorer = true
-        this.eggScores.D1 += 1
-        this.eggScores.D5 += 1
+        for (const [dim, score] of Object.entries(EGG_SCORES.dimExplorer)) {
+          this.eggScores[dim] += score
+        }
         this.normalizeScores()  // 重新计算
       }
     },
@@ -449,8 +523,9 @@ export const useTestStore = defineStore('test', {
     handleSpeedTimeout(questionId) {
       const question = this.speedQs.find(q => q.id === questionId)
       if (!question) return
-      this.eggScores.D1 -= 0.2
-      this.eggScores.D3 -= 0.2
+      for (const [dim, score] of Object.entries(EGG_SCORES.speedTimeout)) {
+        this.eggScores[dim] += score
+      }
       this.answerSpeedQuestion(questionId, question.defaultAnswer)
     },
 
@@ -508,28 +583,28 @@ export const useTestStore = defineStore('test', {
 
     // ─── 1元测试 ───
     handle1YuanConfirm(elapsed) {
-      this.eggScores.D3 += elapsed < 5000 ? 0.8 * 5 : elapsed > 20000 ? -0.5 * 5 : 0
-      this.eggScores.D14 += 0.5 * 4
+      const timingScores = elapsed < 5000 ? EGG_SCORES.yuan.confirm_fast
+        : elapsed > 20000 ? EGG_SCORES.yuan.confirm_slow : {}
+      for (const [dim, score] of Object.entries({ ...timingScores, ...EGG_SCORES.yuan.confirm })) {
+        this.eggScores[dim] += score
+      }
       this.yuanTestStage = 'input'
     },
 
     handle1YuanCancel(elapsed) {
-      this.eggScores.D3 += elapsed < 5000 ? 0.8 * 5 : elapsed > 20000 ? -0.5 * 5 : 0
-      this.eggScores.D14 += -0.5 * 4
-      this.eggScores.D8 += -0.5 * 4
+      const timingScores = elapsed < 5000 ? EGG_SCORES.yuan.cancel_fast
+        : elapsed > 20000 ? EGG_SCORES.yuan.cancel_slow : {}
+      for (const [dim, score] of Object.entries({ ...timingScores, ...EGG_SCORES.yuan.cancel })) {
+        this.eggScores[dim] += score
+      }
       this.finish1YuanTest()
     },
 
     handle1YuanInput(hasInput) {
-      if (hasInput) {
-        this.foundEggs.validCard = true
-        this.eggScores.D8 += 0.5 * 4
-        this.eggScores.D14 += 0.8 * 4
-        this.eggScores.D11 += 0.5 * 3
-      } else {
-        this.eggScores.D8 += 0.5 * 4
-        this.eggScores.D14 += -0.3 * 4
-        this.eggScores.D11 += -0.3 * 2
+      const scores = hasInput ? EGG_SCORES.yuan.input : EGG_SCORES.yuan.noInput
+      if (hasInput) this.foundEggs.validCard = true
+      for (const [dim, score] of Object.entries(scores)) {
+        this.eggScores[dim] += score
       }
       this.finish1YuanTest()
     },
@@ -586,58 +661,9 @@ export const useTestStore = defineStore('test', {
         }
       }
       
-      // Step 2: 彩蛋/隐藏题的理论范围
-      // 每个彩蛋的可能分数范围：最高加分 = 选择最佳路径，最低扣分 = 选择最差路径
-      const eggRange = {
-        // 邀请函：查看 D3+2.5/D5+1/D8+0.9/D2+0.9/D13-0.9，忽略 D5-1/D8-0.9/D2-0.9/D13+1.5
-        D3: { inc: 0.5 * 5, dec: -0.5 * 5 },
-        D5: { inc: 0.5 * 2, dec: -0.5 * 2 },
-        D8: { inc: 0.3 * 3, dec: -0.3 * 3 },
-        D2: { inc: 0.3 * 3, dec: -0.3 * 3 },
-        D13: { inc: 0.5 * 3, dec: -0.3 * 3 },
-        
-        // 隐藏条款/关闭按钮：D1+3.2/D5+1
-        D1_ht: { inc: 0.8 * 4, dec: 0 },  // 至少+3.2
-        D5_ht: { inc: 0.5 * 2, dec: 0 },
-        
-        // nameEgg/rescueEgg：找到 D1+3.2，没找 D1-2
-        D1_name: { inc: 0.8 * 4, dec: -0.5 * 4 },
-        
-        // adCloseButton：D1+3.2
-        D1_ad: { inc: 0.8 * 4, dec: 0 },
-        
-        // 速答超时：D1-0.2/D3-0.2（最多超时一次）
-        D1_timeout: { inc: 0, dec: -0.2 },
-        D3_timeout: { inc: 0, dec: -0.2 },
-        
-        // keyNavUsed：D1+1
-        D1_key: { inc: 1, dec: 0 },
-        
-        // dimExplorer：D1+1/D5+1
-        D1_de: { inc: 1, dec: 0 },
-        D5_de: { inc: 1, dec: 0 },
-        
-        // 1元测试确认：D3快+4/D3慢-2.5，D14+2
-        D3_yuan: { inc: 0.8 * 5, dec: -0.5 * 5 },
-        D14_yuan_ok: { inc: 0.5 * 4, dec: -0.5 * 4 },
-        D8_yuan: { inc: 0.5 * 4, dec: -0.5 * 4 },
-        D11_yuan: { inc: 0.5 * 3, dec: -0.3 * 2 },
-        
-        // poemEgg：D1+4/D5+2.5/D12+2.5
-        D1_poem: { inc: 0.8 * 5, dec: 0 },
-        D5_poem: { inc: 0.5 * 5, dec: 0 },
-        D12_poem: { inc: 0.5 * 5, dec: 0 },
-      }
-      
-      // 将彩蛋范围合并到各维度
-      const eggMerged = {}  // { dim: { inc: totalInc, dec: totalDec } }
-      for (const [key, range] of Object.entries(eggRange)) {
-        const dim = key.split('_')[0]
-        if (!eggMerged[dim]) eggMerged[dim] = { inc: 0, dec: 0 }
-        eggMerged[dim].inc += range.inc
-        eggMerged[dim].dec += range.dec
-      }
-      
+      // Step 2: 彩蛋/隐藏题的理论范围（从EGG_SCORES自动计算）
+      const eggMerged = computeEggRange()
+
       for (const [dim, range] of Object.entries(eggMerged)) {
         if (dimStats[dim]) {
           dimStats[dim].max += range.inc
