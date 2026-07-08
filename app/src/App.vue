@@ -104,6 +104,9 @@ onMounted(() => {
     showWelcome.value = true
     localStorage.setItem('mbti-visited', 'true')
   }
+
+  // 浏览统计
+  fetch('/api/visit', { method: 'POST' }).catch(() => {})
 })
 
 onUnmounted(() => {
