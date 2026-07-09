@@ -35,25 +35,33 @@ const selectedDim = ref(null)
 const liked = ref(false)
 const likeCount = ref(0)
 
-try {
-  liked.value = localStorage.getItem('mbti_liked') === 'true'
-  likeCount.value = Number(localStorage.getItem('mbti_like_count')) || 0
-} catch (e) {}
+// 页面加载时获取真实点赞计数
+const fetchLikeCount = async () => {
+  try {
+    const res = await fetch('/api/like-count')
+    const data = await res.json()
+    likeCount.value = data.count || 1000
+  } catch (e) {
+    likeCount.value = 1000
+  }
+}
+fetchLikeCount()
 
 const handleLike = () => {
   if (liked.value) return
   liked.value = true
   try {
     localStorage.setItem('mbti_liked', 'true')
-    const prev = Number(localStorage.getItem('mbti_like_count')) || 0
-    const next = Math.max(prev + 1, Math.floor(Math.random() * 4001) + 1000)
-    likeCount.value = next
-    localStorage.setItem('mbti_like_count', String(next))
   } catch (e) {}
+  // 发送点赞请求并获取真实计数
+  fetch('/api/like', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      likeCount.value = data.count
+    })
+    .catch(() => {})
   store.dimensionScores.D7 += 1
   store.normalizeScores()
-  // 发送点赞请求到服务器
-  fetch('/api/like', { method: 'POST' }).catch(() => {})
 }
 
 // ─── 结束测试流程 ───
